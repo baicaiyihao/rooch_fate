@@ -1,0 +1,100 @@
+rooch move publish --skip-fetch-latest-git-deps
+INCLUDING DEPENDENCY BitcoinMove
+INCLUDING DEPENDENCY MoveStdlib
+INCLUDING DEPENDENCY MoveosStdlib
+INCLUDING DEPENDENCY RoochFramework
+INCLUDING DEPENDENCY app_admin
+INCLUDING DEPENDENCY grow_bitcoin
+BUILDING fate
+Publish modules to address: a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94
+Execution info:
+    status: Executed
+    gas used: 51532658
+    tx hash: 0xe4b8f138617d1e06d8a7beb094e9c6600d34e11df7b376d416d7653bc56dde1e
+    state root: 0x5b27afa55656cc1ec7c1dde1be0b2175ac2c298431b364de03da3c7f03c38c25
+    event root: 0x22cbc5595771f2800ab7b82e82eb3d654bd7d60bbb5c5971eb5874c19739c224
+
+New modules:
+    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::daily_check_in
+    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::raffle
+    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::random
+    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::admin
+    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::fate
+    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::stake_by_grow_votes
+
+Updated modules:
+    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::market
+
+New objects:
+    objectId: 0x01706b1b24c2c73c1834854f968e8267c55d9993493b7330a1714af3e2069752
+    type    : 0x3::coin::CoinInfo<0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::fate::FATE>
+
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db9403fe4a52439ab4aa95e0624bee4a39f089f12f1145bdbb888cc3e534e34aef2e
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db940ac3f56eda86c89e7efb41247c137269af01af4f48ab9a1734b92cb58b86daea
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db9411f58005a673ab4629dd2c30944273d91b34a1daf76d5629f6982b7f50640f06
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db9487e0280946ed7e635fc109680d878aee9b943df5c42fd852dbbce13c0762aec1
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db949757608dc4ff4f4d369c13efd7a04d95a9e219a85b84e5e8fb2c496e2d84d99b
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94c086268ce4091db3cb93719034789c022988adf001a8737b10c6c663ce078b12
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+
+    objectId: 0x543a4207350b787b2df0c06b5d707916c94126ec11e0aba562e488633fca44a3c6f7ba0adf670c44b684d278579e15ccf566e7b2b21f5d7c8bd8c7915a113338
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x3::coin::CoinMetadata>
+
+    objectId: 0x8bf3ba4607918a929913ba2222b337650f410d6325f52b7011afab22043b008a
+    type    : 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::fate::Treasury
+
+    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db9433a653c84e978e87cb05bac355273d436ffc1c4c12536cab63ebf6568a01a169
+    type    : 0x2::object::DynamicField<0x1::string::String, 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::stake_by_grow_votes::Projectname>
+
+    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db946dc0ccbbfa3e335ac5a386daadb064d91b5ebe61e0ba378b485479861cfe82bc
+    type    : 0x2::object::DynamicField<0x1::string::String, 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::stake_by_grow_votes::StakePool>
+
+    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db947b3a7ac7eeaa202f0791e09393da62108278cfbbb2d748294dda516c24dd862a
+    type    : 0x2::object::DynamicField<0x1::string::String, 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::daily_check_in::Config>
+
+    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db949149248bcf7bfe4cb7e9b7ab5a4ec22e485e9a5357fd6e83e09fd1c1ea9be5d7
+    type    : 0x2::object::DynamicField<0x1::string::String, 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::raffle::CheckInRaffle>
+
+    objectId: 0xb69df7f261715438890e8df7aeef8460f69d38b0a2cf21aac0c5eeb81809c103
+    type    : 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::admin::AdminCap
+
+Modified objects:
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659
+    type    : 0x2::module_store::ModuleStore
+
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94
+    type    : 0x2::module_store::Package
+
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db943b29e71e88699015cfe93402d15ab264ed28156bc12a6b7ef073fd938fc10389
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+
+    objectId: 0x29344e813f7dec57c632a72c07c5c0ec653a094d524bfc221f6ab3a32d5de9c5
+    type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
+
+    objectId: 0x4e5ceb9b30a672308137d1d636497c805340a7d29a927adb150dd1354f924bf0
+    type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
+
+    objectId: 0x543a4207350b787b2df0c06b5d707916c94126ec11e0aba562e488633fca44a3
+    type    : 0x3::coin::CoinRegistry
+
+    objectId: 0x9f56f080b27183553618a84b573b30d79b3b0fcfb2fecf9be4b95308cd0e221e
+    type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
+
+    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94
+    type    : 0x2::account::Account
+
+    objectId: 0xb6fc47ae8cbd3d22dcb2f6b1c17a0e5ce926ab0efb799fab28e31c5acbe752d1
+    type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
+
+Removed objects:
+    None
