@@ -15,6 +15,7 @@ module fate::test_fate {
         fate::daily_check_in::test_init(user);
         fate::raffle::test_init(user);
         fate::market::test_init(user);
+        fate::admin::test_init();
 
         // let sender = signer::address_of(user);
 
@@ -43,7 +44,9 @@ module fate::test_fate {
 
         let admin_cap_id = object::named_object_id<AdminCap>();
         let admin_cap_obj = object::borrow_mut_object<AdminCap>(user,admin_cap_id);
+        fate::market::add_price(admin_cap_obj,items2,20);
         fate::market::update_price(admin_cap_obj,items2,(10 as u256));
+        fate::market::remove_price(admin_cap_obj,items2);
         fate::raffle::get_check_in_raffle_by_fate(user);
     }
 }
