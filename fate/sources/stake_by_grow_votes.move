@@ -47,12 +47,14 @@ module fate::stake_by_grow_votes {
     struct StakeEvent has copy, drop {
         user: address,
         stake_grow_votes: u256,
+        total_staked_votes: u256,
         timestamp: u64,
     }
 
     struct UnstakeEvent has copy, drop {
         user: address,
         stake_grow_votes: u256,
+        total_fate_grow_votes: u256,
         fate_amount: u128,
         timestamp: u64,
     }
@@ -61,6 +63,12 @@ module fate::stake_by_grow_votes {
         user: address,
         fate_amount: u128,
         timestamp: u64,
+    }
+
+    struct VoteUpdateEvent has copy, drop {
+        user: address,
+        new_votes: u256,
+        total_votes: u256,
     }
 
     fun init(admin: &signer) {
@@ -135,31 +143,39 @@ module fate::stake_by_grow_votes {
     ) {
         init_stake_record(user);
         let sender = signer::address_of(user);
-        let project_name = account::borrow_mut_resource<Projectname>(@fate);
+        let project_name = account::borrow_resource<Projectname>(@fate);
         let name = project_name.name;
-        let vote = grow_information_v3::get_vote(grow_project_list_obj, sender, name);
+        let total_votes = grow_information_v3::get_vote(grow_project_list_obj, sender, name);
         let stake_record = account::borrow_mut_resource<StakeRecord>(sender);
-        stake_record.fate_grow_votes = vote;
+        let already_staked = stake_record.stake_grow_votes;
+        let current_unstaked = stake_record.fate_grow_votes;
+        let new_votes = if (total_votes > already_staked + current_unstaked) {
+            total_votes - already_staked - current_unstaked
+        } else {
+            0u256
+        };
+        stake_record.fate_grow_votes = current_unstaked + new_votes;
+
+        emit(VoteUpdateEvent { user: sender, new_votes, total_votes });
     }
 
     public entry fun stake(user: &signer) {
         let sender = signer::address_of(user);
+        let now_seconds = timestamp::now_seconds();
         let stake_pool = account::borrow_mut_resource<StakePool>(@fate);
         assert!(stake_pool.alive, ErrorNotAlive);
-        assert!(timestamp::now_seconds() < stake_pool.end_time, ErrorMiningEnded);
+        assert!(now_seconds < stake_pool.end_time, ErrorMiningEnded);
         let stake_record = account::borrow_mut_resource<StakeRecord>(sender);
-        assert!(stake_record.stake_grow_votes == 0, ErrorAlreadyStaked);
         assert!(stake_record.fate_grow_votes > 0, ErrorZeroVotes);
-        let now_seconds = timestamp::now_seconds();
         let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, now_seconds);
         stake_record.accumulated_fate = stake_record.accumulated_fate + accumulated_fate;
         let votes_to_stake = stake_record.fate_grow_votes;
-        stake_record.stake_grow_votes = votes_to_stake;
+        stake_record.stake_grow_votes = stake_record.stake_grow_votes + votes_to_stake;
         stake_record.fate_grow_votes = 0;
         stake_record.last_harvest_timestamp = now_seconds;
         stake_pool.total_staked_votes = stake_pool.total_staked_votes + votes_to_stake;
         stake_pool.last_update_timestamp = now_seconds;
-        emit(StakeEvent { user: sender, stake_grow_votes: votes_to_stake, timestamp: now_seconds });
+        emit(StakeEvent { user: sender, stake_grow_votes: votes_to_stake, total_staked_votes: stake_record.stake_grow_votes, timestamp: now_seconds });
     }
 
     public entry fun unstake(user: &signer) {
@@ -187,10 +203,11 @@ module fate::stake_by_grow_votes {
         emit(UnstakeEvent {
             user: sender,
             stake_grow_votes: stake_record.stake_grow_votes,
+            total_fate_grow_votes: stake_record.fate_grow_votes + stake_record.stake_grow_votes,
             fate_amount: fate_to_mint,
             timestamp: effective_time,
         });
-        stake_record.fate_grow_votes = stake_record.stake_grow_votes;
+        stake_record.fate_grow_votes = stake_record.fate_grow_votes + stake_record.stake_grow_votes;
         stake_record.stake_grow_votes = 0;
         stake_record.accumulated_fate = 0;
         stake_record.last_harvest_timestamp = effective_time;
@@ -225,7 +242,7 @@ module fate::stake_by_grow_votes {
     }
 
     fun calculate_fate_rewards(stake_pool: &StakePool, stake_record: &StakeRecord, now_seconds: u64): u128 {
-        if (stake_record.stake_grow_votes == 0 || stake_pool.total_staked_votes == 0 || now_seconds <= stake_record.last_harvest_timestamp) {
+        if (stake_record.stake_grow_votes == 0 || stake_pool.total_staked_votes == 0 || now_seconds <= stake_record.last_harvest_timestamp || now_seconds < stake_pool.start_time) {
             return 0
         };
         let time_period = now_seconds - stake_record.last_harvest_timestamp;
@@ -246,24 +263,17 @@ module fate::stake_by_grow_votes {
         }
     }
 
-    public fun query_fate_rewards(user: address): u128 {
+    public fun query_stake_info(user: address): (u64,u256, u256, u128) {
         let stake_pool = account::borrow_resource<StakePool>(@fate);
         if (!account::exists_resource<StakeRecord>(user)) {
-            return 0
+            return (0, 0, 0, 0)
         };
         let stake_record = account::borrow_resource<StakeRecord>(user);
         let now_seconds = timestamp::now_seconds();
         let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
         let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
-        stake_record.accumulated_fate + accumulated_fate
-    }
-
-    public fun query_stake_info(user: address): (u256, u256) {
-        if (!account::exists_resource<StakeRecord>(user)) {
-            return (0, 0)
-        };
-        let stake_record = account::borrow_resource<StakeRecord>(user);
-        (stake_record.fate_grow_votes, stake_record.stake_grow_votes)
+        let total_fate = stake_record.accumulated_fate + accumulated_fate;
+        (stake_record.last_harvest_timestamp, stake_record.fate_grow_votes, stake_record.stake_grow_votes, total_fate)
     }
 
     public fun query_pool_info(): (u256, u64, u256, u128, u64, u256, bool) {
@@ -287,9 +297,7 @@ module fate::stake_by_grow_votes {
     #[test_only]
     public fun create_stake_record_for_test(user: &signer, mock_votes: u256) {
         init_stake_record(user);
-        let sender = signer::address_of(user);
-        let stake_record = account::borrow_mut_resource<StakeRecord>(sender);
-        stake_record.fate_grow_votes = mock_votes;
+        test_update_grow_votes(user,mock_votes);
     }
 
     #[test_only]
@@ -310,20 +318,19 @@ module fate::stake_by_grow_votes {
     #[test_only]
     public fun test_stake(user: &signer, stake_pool: &mut StakePool, stake_record: &mut StakeRecord) {
         let sender = signer::address_of(user);
-        assert!(stake_pool.alive, ErrorNotAlive);
-        assert!(timestamp::now_seconds() < stake_pool.end_time, ErrorMiningEnded);
-        assert!(stake_record.stake_grow_votes == 0, ErrorAlreadyStaked);
-        assert!(stake_record.fate_grow_votes > 0, ErrorZeroVotes);
         let now_seconds = timestamp::now_seconds();
+        assert!(stake_pool.alive, ErrorNotAlive);
+        assert!(now_seconds < stake_pool.end_time, ErrorMiningEnded);
+        assert!(stake_record.fate_grow_votes > 0, ErrorZeroVotes);
         let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, now_seconds);
         stake_record.accumulated_fate = stake_record.accumulated_fate + accumulated_fate;
         let votes_to_stake = stake_record.fate_grow_votes;
-        stake_record.stake_grow_votes = votes_to_stake;
+        stake_record.stake_grow_votes = stake_record.stake_grow_votes + votes_to_stake;
         stake_record.fate_grow_votes = 0;
         stake_record.last_harvest_timestamp = now_seconds;
         stake_pool.total_staked_votes = stake_pool.total_staked_votes + votes_to_stake;
         stake_pool.last_update_timestamp = now_seconds;
-        emit(StakeEvent { user: sender, stake_grow_votes: votes_to_stake, timestamp: now_seconds });
+        emit(StakeEvent { user: sender, stake_grow_votes: votes_to_stake, total_staked_votes: stake_record.stake_grow_votes, timestamp: now_seconds });
     }
 
     #[test_only]
@@ -385,6 +392,7 @@ module fate::stake_by_grow_votes {
         emit(UnstakeEvent {
             user: sender,
             stake_grow_votes: stake_record.stake_grow_votes,
+            total_fate_grow_votes: stake_record.fate_grow_votes + stake_record.stake_grow_votes,
             fate_amount: fate_to_mint,
             timestamp: effective_time,
         });
@@ -406,5 +414,29 @@ module fate::stake_by_grow_votes {
             stake_pool.total_mined_fate,
             stake_pool.alive
         )
+    }
+
+    #[test_only]
+    public entry fun test_update_grow_votes(
+        user: &signer,
+        test_total_votes: u256,
+    ) {
+        init_stake_record(user);
+        let sender = signer::address_of(user);
+        let total_votes = test_total_votes;
+        let stake_record = account::borrow_mut_resource<StakeRecord>(sender);
+        let already_staked = stake_record.stake_grow_votes;
+        let current_unstaked = stake_record.fate_grow_votes;
+        let new_votes = if (total_votes > already_staked + current_unstaked) {
+            total_votes - already_staked - current_unstaked
+        } else {
+            0u256
+        };
+        stake_record.fate_grow_votes = current_unstaked + new_votes;
+    }
+
+    #[test_only]
+    public fun test_query_time(): u64 {
+        timestamp::now_seconds()
     }
 }
