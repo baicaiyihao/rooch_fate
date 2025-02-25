@@ -40,7 +40,7 @@ module fate::test_stake_and_harvest {
         let stake_pool = account::borrow_mut_resource<StakePool>(sender_addr);
         let stake_record = account::borrow_mut_resource<StakeRecord>(sender_addr);
         fate::stake_by_grow_votes::test_stake(sender, stake_pool, stake_record);
-        let (_, fate_grow_votes, stake_grow_votes, _) = fate::stake_by_grow_votes::query_stake_info(sender_addr);
+        let (_, fate_grow_votes, stake_grow_votes, _, _) = fate::stake_by_grow_votes::query_stake_info(sender_addr);
         assert!(fate_grow_votes == 0, 1);
         assert!(stake_grow_votes == mock_votes, 2);
 
@@ -63,7 +63,7 @@ module fate::test_stake_and_harvest {
         let stake_pool = account::borrow_mut_resource<StakePool>(sender_addr);
         let stake_record = account::borrow_mut_resource<StakeRecord>(sender_addr);
         fate::stake_by_grow_votes::test_stake(sender, stake_pool, stake_record);
-        let (_, fate_grow_votes, stake_grow_votes, _) = fate::stake_by_grow_votes::query_stake_info(sender_addr);
+        let (_, fate_grow_votes, stake_grow_votes, _, _) = fate::stake_by_grow_votes::query_stake_info(sender_addr);
         assert!(fate_grow_votes == 0, 1);
         assert!(stake_grow_votes == 2000, 2);
         fast_forward_seconds_for_test(100);
@@ -79,7 +79,7 @@ module fate::test_stake_and_harvest {
         let stake_pool = account::borrow_mut_resource<StakePool>(sender_addr);
         let stake_record = account::borrow_mut_resource<StakeRecord>(sender_addr);
         fate::stake_by_grow_votes::test_stake(sender, stake_pool, stake_record);
-        let (_, fate_grow_votes, stake_grow_votes, _) = fate::stake_by_grow_votes::query_stake_info(sender_addr);
+        let (_, fate_grow_votes, stake_grow_votes, _, _) = fate::stake_by_grow_votes::query_stake_info(sender_addr);
         assert!(fate_grow_votes == 0, 1);
         assert!(stake_grow_votes == 3000, 2);
         fast_forward_seconds_for_test(100);
@@ -89,7 +89,7 @@ module fate::test_stake_and_harvest {
         let balance = account_coin_store::balance<FATE>(sender_addr);
         assert!(balance == 300000000000, 4);
 
-        let (_, total_votes, staked_votes, _) = fate::stake_by_grow_votes::query_stake_info(sender_addr);
+        let (_,total_votes, staked_votes, _, _) = fate::stake_by_grow_votes::query_stake_info(sender_addr);
         assert!(staked_votes == 0, 5);
         assert!(total_votes == 3000, 6);
         let (_, _, total_supply, _, _, total_mined, _) = fate::stake_by_grow_votes::test_query_pool_info(sender);

@@ -40,6 +40,27 @@ module fate::stake_by_grow_votes {
         accumulated_fate: u128,
     }
 
+    struct StakePoolView has copy, drop {
+        total_staked_votes: u256,
+        last_update_timestamp: u64,
+        start_time: u64,
+        end_time: u64,
+        total_fate_supply: u256,
+        mining_duration_seconds: u64,
+        fate_per_day: u128,
+        total_mined_fate: u256,
+        release_per_second: u128,
+        alive: bool,
+    }
+
+    struct StakeRecordView has copy, drop {
+        user: address,
+        fate_grow_votes: u256,
+        stake_grow_votes: u256,
+        last_harvest_timestamp: u64,
+        accumulated_fate: u128,
+    }
+
     struct Projectname has key {
         name: String
     }
@@ -263,30 +284,78 @@ module fate::stake_by_grow_votes {
         }
     }
 
-    public fun query_stake_info(user: address): (u64,u256, u256, u128) {
+    #[view]
+    public fun query_stake_info(user: address): (address, u256, u256, u64, u128) {
         let stake_pool = account::borrow_resource<StakePool>(@fate);
-        if (!account::exists_resource<StakeRecord>(user)) {
-            return (0, 0, 0, 0)
-        };
         let stake_record = account::borrow_resource<StakeRecord>(user);
         let now_seconds = timestamp::now_seconds();
         let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
         let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
         let total_fate = stake_record.accumulated_fate + accumulated_fate;
-        (stake_record.last_harvest_timestamp, stake_record.fate_grow_votes, stake_record.stake_grow_votes, total_fate)
+        (
+            stake_record.user,
+            stake_record.fate_grow_votes,
+            stake_record.stake_grow_votes,
+            stake_record.last_harvest_timestamp,
+            total_fate
+        )
     }
 
-    public fun query_pool_info(): (u256, u64, u256, u128, u64, u256, bool) {
+    #[view]
+    public fun query_pool_info(): (u256, u64, u64, u64, u256, u64, u128, u256, u128, bool) {
         let stake_pool = account::borrow_resource<StakePool>(@fate);
         (
             stake_pool.total_staked_votes,
+            stake_pool.last_update_timestamp,
+            stake_pool.start_time,
             stake_pool.end_time,
             stake_pool.total_fate_supply,
-            stake_pool.fate_per_day,
             stake_pool.mining_duration_seconds,
+            stake_pool.fate_per_day,
             stake_pool.total_mined_fate,
+            stake_pool.release_per_second,
             stake_pool.alive
         )
+    }
+
+    #[view]
+    public fun query_stake_info_view(user: address): StakeRecordView {
+        let stake_pool = account::borrow_resource<StakePool>(@fate);
+        let stake_record = account::borrow_resource<StakeRecord>(user);
+        let now_seconds = timestamp::now_seconds();
+        let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
+        let total_fate = stake_record.accumulated_fate + accumulated_fate;
+        StakeRecordView{
+            user: stake_record.user,
+            fate_grow_votes: stake_record.fate_grow_votes,
+            stake_grow_votes: stake_record.stake_grow_votes,
+            last_harvest_timestamp: stake_record.last_harvest_timestamp,
+            accumulated_fate: total_fate
+        }
+    }
+
+    #[view]
+    public fun query_pool_info_view(): StakePoolView {
+        let stake_pool = account::borrow_resource<StakePool>(@fate);
+        StakePoolView {
+            total_staked_votes: stake_pool.total_staked_votes,
+            last_update_timestamp: stake_pool.last_update_timestamp,
+            start_time: stake_pool.start_time,
+            end_time: stake_pool.end_time,
+            total_fate_supply: stake_pool.total_fate_supply,
+            mining_duration_seconds: stake_pool.mining_duration_seconds,
+            fate_per_day: stake_pool.fate_per_day,
+            total_mined_fate: stake_pool.total_mined_fate,
+            release_per_second: stake_pool.release_per_second,
+            alive: stake_pool.alive
+        }
+    }
+
+    #[view]
+    public fun query_project_name(): String {
+        let project_name = account::borrow_resource<Projectname>(@fate);
+        project_name.name
     }
 
     #[test_only]

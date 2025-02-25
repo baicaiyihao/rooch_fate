@@ -13,6 +13,8 @@ module fate::raffle {
 
     const Err_Not_enough_raffle_times: u64 = 101;
 
+    const ONE_FATE: u256 = 1000000;
+
     struct CheckInRaffle has key {
         grand_prize_duration: u256,
         second_prize_duration: u256,
@@ -24,6 +26,21 @@ module fate::raffle {
     }
 
     struct CheckInRaffleRecord has key{
+        user: address,
+        raffle_count: u64
+    }
+
+    struct CheckInRaffleView has copy, drop {
+        grand_prize_duration: u256,
+        second_prize_duration: u256,
+        third_prize_duration: u256,
+        grand_prize_weight: u256,
+        second_prize_weight: u256,
+        third_prize_weight: u256,
+        max_raffle_count_weight: u64
+    }
+
+    struct CheckInRaffleRecordView has copy, drop{
         user: address,
         raffle_count: u64
     }
@@ -61,10 +78,13 @@ module fate::raffle {
 
         let checkinraffle = account::borrow_mut_resource<CheckInRaffle>(@fate);
         let checkInRaffleRecord = account::borrow_mut_resource<CheckInRaffleRecord>(address_of(user));
-        let price = checkinraffle.third_prize_duration * 2;
+        let avg_price = (checkinraffle.grand_prize_duration * checkinraffle.grand_prize_weight +
+            checkinraffle.second_prize_duration * checkinraffle.second_prize_weight +
+            checkinraffle.third_prize_duration * checkinraffle.third_prize_weight) / 100;
 
         let treasury = object::borrow_mut(get_treasury());
-        let cost_coin = account_coin_store::withdraw<FATE>(user, price);
+
+        let cost_coin = account_coin_store::withdraw<FATE>(user, avg_price * ONE_FATE);
         burn_coin(treasury,cost_coin);
         checkInRaffleRecord.raffle_count = checkInRaffleRecord.raffle_count + 1;
         get_check_in_raffle(user);
@@ -77,7 +97,7 @@ module fate::raffle {
         assert!(checkInRaffleRecord.raffle_count >= checkinraffle.max_raffle_count_weight,Err_Not_enough_raffle_times);
         checkInRaffleRecord.raffle_count = checkInRaffleRecord.raffle_count - checkinraffle.max_raffle_count_weight;
         let treasury = object::borrow_mut(get_treasury());
-        let coin = mint_coin(treasury,checkinraffle.grand_prize_duration);
+        let coin = mint_coin(treasury,checkinraffle.grand_prize_duration * ONE_FATE);
         account_coin_store::deposit(sender, coin);
     }
 
@@ -88,14 +108,14 @@ module fate::raffle {
         let checkinraffle = account::borrow_mut_resource<CheckInRaffle>(@fate);
         let treasury = object::borrow_mut(get_treasury());
 
-        if (random_value < checkinraffle.grand_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.grand_prize_duration);
+        if (random_value <= checkinraffle.grand_prize_weight) {
+            let coin = mint_coin(treasury,checkinraffle.grand_prize_duration * ONE_FATE);
             account_coin_store::deposit(sender, coin);
-        } else if (random_value < checkinraffle.grand_prize_weight + checkinraffle.second_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.second_prize_duration);
+        } else if (random_value <= checkinraffle.grand_prize_weight + checkinraffle.second_prize_weight) {
+            let coin = mint_coin(treasury,checkinraffle.second_prize_duration * ONE_FATE);
             account_coin_store::deposit(sender, coin);
-        } else if (random_value < checkinraffle.grand_prize_weight + checkinraffle.second_prize_weight + checkinraffle.third_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.third_prize_duration);
+        } else if (random_value <= checkinraffle.grand_prize_weight + checkinraffle.second_prize_weight + checkinraffle.third_prize_weight) {
+            let coin = mint_coin(treasury,checkinraffle.third_prize_duration * ONE_FATE);
             account_coin_store::deposit(sender, coin);
         };
 
@@ -123,6 +143,52 @@ module fate::raffle {
         checkinraffle.third_prize_duration = third_prize_duration;
         checkinraffle.third_prize_weight = third_prize_weight;
         checkinraffle.max_raffle_count_weight = max_raffle_count_weight;
+    }
+
+    #[view]
+    public fun query_check_in_raffle(): (u256, u256, u256, u256, u256, u256, u64) {
+        let checkinraffle = account::borrow_resource<CheckInRaffle>(@fate);
+        (
+            checkinraffle.grand_prize_duration,
+            checkinraffle.grand_prize_weight,
+            checkinraffle.second_prize_duration,
+            checkinraffle.second_prize_weight,
+            checkinraffle.third_prize_duration,
+            checkinraffle.third_prize_weight,
+            checkinraffle.max_raffle_count_weight,
+        )
+    }
+
+    #[view]
+    public fun query_check_in_raffle_record(user: address): (address, u64) {
+        let check_in_raffle_record = account::borrow_resource<CheckInRaffleRecord>(user);
+        (
+            check_in_raffle_record.user,
+            check_in_raffle_record.raffle_count
+        )
+    }
+
+    #[view]
+    public fun query_check_in_raffle_view(): CheckInRaffleView {
+        let checkinraffle = account::borrow_resource<CheckInRaffle>(@fate);
+        CheckInRaffleView {
+            grand_prize_duration: checkinraffle.grand_prize_duration,
+            grand_prize_weight: checkinraffle.grand_prize_weight,
+            second_prize_duration: checkinraffle.second_prize_duration,
+            second_prize_weight: checkinraffle.second_prize_weight,
+            third_prize_duration: checkinraffle.third_prize_duration,
+            third_prize_weight: checkinraffle.third_prize_weight,
+            max_raffle_count_weight: checkinraffle.max_raffle_count_weight,
+        }
+    }
+
+    #[view]
+    public fun query_check_in_raffle_record_view(user: address): CheckInRaffleRecordView {
+        let check_in_raffle_record = account::borrow_resource<CheckInRaffleRecord>(user);
+        CheckInRaffleRecordView{
+            user: check_in_raffle_record.user,
+            raffle_count: check_in_raffle_record.raffle_count
+        }
     }
 
     #[test_only]

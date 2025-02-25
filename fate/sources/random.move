@@ -70,7 +70,7 @@ module fate::random {
         magic_number
     }
 
-    public(friend) fun get_random(account: &signer, max: u256): u256 {
+    public fun get_random(account: &signer, max: u256): u256 {
         let magic_number = generate_magic_number();
         let account_addr = signer::address_of(account);
         let now_seconds = timestamp::now_milliseconds();

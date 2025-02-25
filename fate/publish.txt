@@ -1,97 +1,105 @@
-rooch move publish --skip-fetch-latest-git-deps
-INCLUDING DEPENDENCY BitcoinMove
-INCLUDING DEPENDENCY MoveStdlib
-INCLUDING DEPENDENCY MoveosStdlib
-INCLUDING DEPENDENCY RoochFramework
-INCLUDING DEPENDENCY app_admin
-INCLUDING DEPENDENCY grow_bitcoin
-BUILDING fate
-Publish modules to address: a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94
+Publish modules to address: 3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe
 Execution info:
     status: Executed
-    gas used: 51532658
-    tx hash: 0xe4b8f138617d1e06d8a7beb094e9c6600d34e11df7b376d416d7653bc56dde1e
-    state root: 0x5b27afa55656cc1ec7c1dde1be0b2175ac2c298431b364de03da3c7f03c38c25
-    event root: 0x22cbc5595771f2800ab7b82e82eb3d654bd7d60bbb5c5971eb5874c19739c224
+    gas used: 58365082
+    tx hash: 0x308f457c34981d87acf50c48b7060e111deec49daa1c90be7f3d090ee717a208
+    state root: 0xe3fc5bef579bc97ea70918a63bf86ea887eaf7818451dda6048d8cd75bb925c3
+    event root: 0x32d2e3a5ee6c82c7da378d99379b192951e1d0165157bdd5ca4176d8f230a9fe
 
 New modules:
-    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::daily_check_in
-    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::raffle
-    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::random
-    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::admin
-    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::fate
-    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::stake_by_grow_votes
+    0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::daily_check_in
+    0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::raffle
+    0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::random
+    0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::market
+    0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::admin
+    0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::fate
+    0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::stake_by_grow_votes
 
 Updated modules:
-    0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::market
+    None
 
 New objects:
-    objectId: 0x01706b1b24c2c73c1834854f968e8267c55d9993493b7330a1714af3e2069752
-    type    : 0x3::coin::CoinInfo<0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::fate::FATE>
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d5060023796593586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe
+    type    : 0x2::module_store::Package
 
-    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db9403fe4a52439ab4aa95e0624bee4a39f089f12f1145bdbb888cc3e534e34aef2e
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d5060023796593586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe03fe4a52439ab4aa95e0624bee4a39f089f12f1145bdbb888cc3e534e34aef2e
     type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
 
-    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db940ac3f56eda86c89e7efb41247c137269af01af4f48ab9a1734b92cb58b86daea
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d5060023796593586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe0ac3f56eda86c89e7efb41247c137269af01af4f48ab9a1734b92cb58b86daea
     type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
 
-    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db9411f58005a673ab4629dd2c30944273d91b34a1daf76d5629f6982b7f50640f06
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d5060023796593586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe11f58005a673ab4629dd2c30944273d91b34a1daf76d5629f6982b7f50640f06
     type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
 
-    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db9487e0280946ed7e635fc109680d878aee9b943df5c42fd852dbbce13c0762aec1
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d5060023796593586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe3b29e71e88699015cfe93402d15ab264ed28156bc12a6b7ef073fd938fc10389
     type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
 
-    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db949757608dc4ff4f4d369c13efd7a04d95a9e219a85b84e5e8fb2c496e2d84d99b
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d5060023796593586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe87e0280946ed7e635fc109680d878aee9b943df5c42fd852dbbce13c0762aec1
     type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
 
-    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94c086268ce4091db3cb93719034789c022988adf001a8737b10c6c663ce078b12
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d5060023796593586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe9757608dc4ff4f4d369c13efd7a04d95a9e219a85b84e5e8fb2c496e2d84d99b
     type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
 
-    objectId: 0x543a4207350b787b2df0c06b5d707916c94126ec11e0aba562e488633fca44a3c6f7ba0adf670c44b684d278579e15ccf566e7b2b21f5d7c8bd8c7915a113338
+    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d5060023796593586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fec086268ce4091db3cb93719034789c022988adf001a8737b10c6c663ce078b12
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+
+    objectId: 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe054aa58d3d0d1b9299a92818557dad12026e7332d85b5552d5ca5959091f4898
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::raffle::CheckInRaffle>
+
+    objectId: 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe3025e213b5584179e0e097a2e3dfa79e3609df1cd4edc46ae0509e4db9857a1f
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::stake_by_grow_votes::StakePool>
+
+    objectId: 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe3d88f29a9348ad2877885647ca8c93a9c3c0885fe6891c0cd69d6a20f65f24fb
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::market::PriceRecord>
+
+    objectId: 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe9a4e7ea0d8d4a1b4ed0be3cf9895937fa8cbc1fcfb172cafe88e97e133014f01
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::stake_by_grow_votes::Projectname>
+
+    objectId: 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fefd989678ef5ea5ff144a61b4dce628f509fc7ca28bf4ea089ae275c60cdc9013
+    type    : 0x2::object::DynamicField<0x1::string::String, 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::daily_check_in::Config>
+
+    objectId: 0x543a4207350b787b2df0c06b5d707916c94126ec11e0aba562e488633fca44a3e8d85a621c3b54a65c33b428a2e68ff555d85beb683eafc7bac8bfe08f215453
     type    : 0x2::object::DynamicField<0x1::string::String, 0x3::coin::CoinMetadata>
 
-    objectId: 0x8bf3ba4607918a929913ba2222b337650f410d6325f52b7011afab22043b008a
-    type    : 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::fate::Treasury
+    objectId: 0x7dfa6d2e631a7d89cf1b3a51a0fccb1a09fc1a07d9c7cf23b96a3adb71cbd246
+    type    : 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::fate::Treasury
 
-    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db9433a653c84e978e87cb05bac355273d436ffc1c4c12536cab63ebf6568a01a169
-    type    : 0x2::object::DynamicField<0x1::string::String, 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::stake_by_grow_votes::Projectname>
+    objectId: 0x7e2bed589ff490f742a155c1cd5cb6da1249fb9f918da40977d81127e54d0406
+    type    : 0x2::table::TablePlaceholder
 
-    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db946dc0ccbbfa3e335ac5a386daadb064d91b5ebe61e0ba378b485479861cfe82bc
-    type    : 0x2::object::DynamicField<0x1::string::String, 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::stake_by_grow_votes::StakePool>
+    objectId: 0x7e2bed589ff490f742a155c1cd5cb6da1249fb9f918da40977d81127e54d040649b9db8f4f14c74481abbb35e4c38496d706d08a684f2676b5f2050906d371df
+    type    : 0x2::object::DynamicField<0x1::string::String, u256>
 
-    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db947b3a7ac7eeaa202f0791e09393da62108278cfbbb2d748294dda516c24dd862a
-    type    : 0x2::object::DynamicField<0x1::string::String, 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::daily_check_in::Config>
+    objectId: 0x846a7f9a1615d9ef73ef3e21b638a331c6ec97acecb8f2a2845bde4dd489c243
+    type    : 0x2::module_store::UpgradeCap
 
-    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db949149248bcf7bfe4cb7e9b7ab5a4ec22e485e9a5357fd6e83e09fd1c1ea9be5d7
-    type    : 0x2::object::DynamicField<0x1::string::String, 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::raffle::CheckInRaffle>
+    objectId: 0xa3b9bbd9343dc305ba3c886e2c224ded35ae52d1cb417f9c5456d46eb9b81433
+    type    : 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::admin::AdminCap
 
-    objectId: 0xb69df7f261715438890e8df7aeef8460f69d38b0a2cf21aac0c5eeb81809c103
-    type    : 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94::admin::AdminCap
+    objectId: 0xd26c9f733849fd5c7e8b598e80671acd5bf8e23ab16a3141b795545edc2a4f14
+    type    : 0x3::coin::CoinInfo<0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe::fate::FATE>
 
 Modified objects:
     objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659
     type    : 0x2::module_store::ModuleStore
 
-    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94
-    type    : 0x2::module_store::Package
-
-    objectId: 0x14481947570f6c2f50d190f9a13bf549ab2f0c9debc41296cd4d506002379659a7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db943b29e71e88699015cfe93402d15ab264ed28156bc12a6b7ef073fd938fc10389
-    type    : 0x2::object::DynamicField<0x1::string::String, 0x2::move_module::MoveModule>
+    objectId: 0x289d74f33050a098976f4416dd06c93718fd477c84ab90a1ed7204f14f91584e
+    type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
 
     objectId: 0x29344e813f7dec57c632a72c07c5c0ec653a094d524bfc221f6ab3a32d5de9c5
     type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
+
+    objectId: 0x3586e29fe63e747a419c0ac7fcc4c679b2ee9bddc84d734c4f24912f8e1eb6fe
+    type    : 0x2::account::Account
+
+    objectId: 0x3a7dfe7a9a5cd608810b5ebd60c7adf7316667b17ad5ae703af301b74310bcca
+    type    : 0x2::timestamp::Timestamp
 
     objectId: 0x4e5ceb9b30a672308137d1d636497c805340a7d29a927adb150dd1354f924bf0
     type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
 
     objectId: 0x543a4207350b787b2df0c06b5d707916c94126ec11e0aba562e488633fca44a3
     type    : 0x3::coin::CoinRegistry
-
-    objectId: 0x9f56f080b27183553618a84b573b30d79b3b0fcfb2fecf9be4b95308cd0e221e
-    type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
-
-    objectId: 0xa7265b12912e79bcd4109057e6fa2e4ae915c32efb0841204909084712d5db94
-    type    : 0x2::account::Account
 
     objectId: 0xb6fc47ae8cbd3d22dcb2f6b1c17a0e5ce926ab0efb799fab28e31c5acbe752d1
     type    : 0x3::coin_store::CoinStore<0x3::gas_coin::RGas>
