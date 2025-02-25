@@ -1,0 +1,23 @@
+modify_stake_pool
+rooch move run --function default::stake_by_grow_votes::modify_stake_pool --args "object:" --args "u256:" --args "u64:" --args "u64:"
+
+set_project_name
+rooch move run --function default::stake_by_grow_votes::set_project_name --args "object:" --args "string:"
+
+set_check_in_raffle
+rooch move run --function default::raffle::set_check_in_raffle --args "object:" --args "u256:" --args "u256:" --args "u256:" --args "u256:" --args "u256:" --args "u256:" --args "u64:"
+
+add_price
+rooch move run --function default::market::add_price --args "object:" --args "string:" --args "u256:"
+
+update_price
+rooch move run --function default::market::update_price --args "object:" --args "string:" --args "u256:"
+
+remove_price
+rooch move run --function default::market::remove_price --args "object:" --args "string:"
+
+update_config
+rooch move run --function default::daily_check_in::update_config --args "object:" --args "string:" --args "u256:" --args "u64:"
+
+
+
