@@ -107,7 +107,7 @@ module fate::stake_by_grow_votes {
             alive: false,
         });
         account::move_resource_to(admin,Projectname{
-            name: string::utf8(b"FATE3AI"),
+            name: string::utf8(b"goldminer"),
         });
     }
 
