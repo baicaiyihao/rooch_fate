@@ -12,6 +12,7 @@ module fate::fate {
     friend fate::market;
     friend fate::raffle;
     friend fate::stake_by_grow_votes;
+    friend fate::leaderboard;
 
     const ErrorTransferAmountTooLarge: u64 = 1;
     const DECIMALS: u8 = 6u8;

@@ -11,6 +11,8 @@ module fate::daily_check_in {
     use rooch_framework::account_coin_store;
     use fate::fate::{get_treasury, mint_coin};
 
+    friend fate::leaderboard;
+
     const Err_ALREADY_CHECKED_IN: u64 = 101;
     const Err_CHECKED_IN_RAFFLE: u64 = 102;
     const Err_OUT_OF_CONTINUE_DAYS: u64 = 103;
@@ -168,11 +170,11 @@ module fate::daily_check_in {
         account_coin_store::deposit(sender, coin);
     }
 
-    fun is_same_day(timestamp1: u64, timestamp2: u64): bool {
+    public(friend) fun is_same_day(timestamp1: u64, timestamp2: u64): bool {
         timestamp1 / SECONDS_PER_DAY == timestamp2 / SECONDS_PER_DAY
     }
 
-    fun is_next_day(timestamp1: u64, timestamp2: u64): bool {
+    public(friend) fun is_next_day(timestamp1: u64, timestamp2: u64): bool {
         let day1 = timestamp1 / SECONDS_PER_DAY;
         let day2 = timestamp2 / SECONDS_PER_DAY;
         day2 == day1 + 1
