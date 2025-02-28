@@ -1,22 +1,20 @@
 module fate::daily_check_in {
     use std::signer::address_of;
-    use std::vector;
-    use std::vector::length;
+    use std::vector::{borrow, length};
     use fate::raffle::get_check_in_raffle;
     use fate::admin::AdminCap;
+    use fate::utils::{is_next_day, is_same_day};
     use moveos_std::account;
     use moveos_std::object::{Self, Object};
     use moveos_std::signer;
     use moveos_std::timestamp::{Self};
     use rooch_framework::account_coin_store;
     use fate::fate::{get_treasury, mint_coin};
-
-    friend fate::leaderboard;
+    use fate::user_nft::{check_user_nft, query_user_nft};
 
     const Err_ALREADY_CHECKED_IN: u64 = 101;
     const Err_CHECKED_IN_RAFFLE: u64 = 102;
     const Err_OUT_OF_CONTINUE_DAYS: u64 = 103;
-    const SECONDS_PER_DAY: u64 = 24 * 60 * 60;
     const ONE_FATE: u256 = 1000000;
 
     struct Config has key {
@@ -82,7 +80,7 @@ module fate::daily_check_in {
             userCheckIn.last_sign_in_timestamp = this_epoch_time;
             userCheckIn.total_sign_in_days = userCheckIn.total_sign_in_days + 1;
             let treasury = object::borrow_mut(get_treasury());
-            let reward = *vector::borrow(&config.daily_rewards, userCheckIn.continue_days);
+            let reward = *borrow(&config.daily_rewards, userCheckIn.continue_days);
             let coin = mint_coin(treasury, reward * ONE_FATE);
             account_coin_store::deposit(sender, coin);
             userCheckIn.continue_days = userCheckIn.continue_days + 1;
@@ -131,30 +129,20 @@ module fate::daily_check_in {
     }
 
     #[view]
-    public fun get_check_in_record_view(user: address): CheckInRecordView{
+    public fun get_check_in_record_view(user: address): &CheckInRecord{
         let userCheckIn = account::borrow_resource<CheckInRecord>(user);
-        CheckInRecordView {
-            owner: userCheckIn.owner,
-            register_time: userCheckIn.register_time,
-            total_sign_in_days: userCheckIn.total_sign_in_days,
-            last_sign_in_timestamp: userCheckIn.last_sign_in_timestamp,
-            continue_days: userCheckIn.continue_days,
-            lottery_count: userCheckIn.lottery_count,
-        }
+        userCheckIn
     }
 
     #[view]
-    public fun query_config_view(): ConfigView {
+    public fun query_config_view(): &Config {
         let config = account::borrow_resource<Config>(@fate);
-        ConfigView {
-            daily_rewards: config.daily_rewards,
-            max_continue_days: config.max_continue_days
-        }
+        config
     }
 
     fun check_in_rewards(userCheckIn: &mut CheckInRecord, config: &mut Config, this_epoch_time: u64, sender: address) {
         assert!(userCheckIn.continue_days < length(&config.daily_rewards),Err_OUT_OF_CONTINUE_DAYS);
-        let reward = *vector::borrow(&config.daily_rewards, userCheckIn.continue_days);
+        let reward = *borrow(&config.daily_rewards, userCheckIn.continue_days);
         if (is_next_day(userCheckIn.last_sign_in_timestamp, this_epoch_time)) {
             userCheckIn.continue_days = if (userCheckIn.continue_days + 1 >= config.max_continue_days) 0 else userCheckIn.continue_days + 1;
             if (userCheckIn.continue_days == 0) {
@@ -166,18 +154,15 @@ module fate::daily_check_in {
         userCheckIn.last_sign_in_timestamp = this_epoch_time;
         userCheckIn.total_sign_in_days = userCheckIn.total_sign_in_days + 1;
         let treasury = object::borrow_mut(get_treasury());
-        let coin = mint_coin(treasury, reward * ONE_FATE);
-        account_coin_store::deposit(sender, coin);
-    }
-
-    public(friend) fun is_same_day(timestamp1: u64, timestamp2: u64): bool {
-        timestamp1 / SECONDS_PER_DAY == timestamp2 / SECONDS_PER_DAY
-    }
-
-    public(friend) fun is_next_day(timestamp1: u64, timestamp2: u64): bool {
-        let day1 = timestamp1 / SECONDS_PER_DAY;
-        let day2 = timestamp2 / SECONDS_PER_DAY;
-        day2 == day1 + 1
+        if (check_user_nft(sender)){
+            let (checkin_bonus, _, _, _) = query_user_nft(sender);
+            let boosted_share = reward * (100 + (checkin_bonus as u256)) / 100;
+            let coin = mint_coin(treasury, boosted_share * ONE_FATE);
+            account_coin_store::deposit(sender, coin);
+        }else {
+            let coin = mint_coin(treasury, reward * ONE_FATE);
+            account_coin_store::deposit(sender, coin);
+        }
     }
 
     #[test_only]

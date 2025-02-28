@@ -2,7 +2,7 @@ module fate::leaderboard {
     use std::signer;
     use std::vector::{length, borrow};
     use moveos_std::timestamp::now_seconds;
-    use fate::daily_check_in::is_next_day;
+    use fate::utils::is_next_day;
     use moveos_std::table::Table;
     use fate::admin::AdminCap;
     use fate::fate::{FATE, burn_coin, get_treasury};
@@ -16,7 +16,8 @@ module fate::leaderboard {
     use moveos_std::timestamp;
     use rooch_framework::account_coin_store;
     use grow_bitcoin::grow_bitcoin::GROW;
-    use fate::stake_by_grow_votes;
+    use fate::user_nft::{mint_usernft, query_user_nft, check_user_nft, update_nft, set_user_nft_burn_amount};
+    use fate::stake_by_grow_votes::{query_pool_info, query_stake_info};
 
     // Error codes
     const E_LEADERBOARD_NOT_ALIVE: u64 = 101;  // Leaderboard is not active
@@ -31,6 +32,8 @@ module fate::leaderboard {
     const E_INSUFFICIENT_GROW: u64 = 111;      // Insufficient GROW balance in pool
     const E_ALREADY_CLAIMED: u64 = 112;        // Rewards already claimed
     const E_NO_REWARDS: u64 = 113;             // No rewards available to claim
+    const E_NFT_NOT_FOUND: u64 = 114;             // No rewards available to claim
+
 
     // Core leaderboard data structure
     struct Leaderboard has key {
@@ -57,19 +60,8 @@ module fate::leaderboard {
     struct LevelConfig has store {
         level: u64,                             // Level ID (1-7)
         checkin_bonus: u64,                     // Check-in bonus percentage
-        market_discount: u64,                   // Market discount percentage
+        raffle_discount: u64,                   // Market discount percentage
         stake_weight: u64                       // Stake weight bonus percentage
-    }
-
-    // User NFT structure for individual data
-    struct UserNft has key {
-        owner: address,                         // NFT owner address
-        level: u64,                             // Current level (1-7)
-        checkin_bonus: u64,                     // Check-in bonus percentage
-        market_discount: u64,                   // Market discount percentage
-        stake_weight: u64,                      // Stake weight bonus percentage
-        burn_amount: u256,                      // Total FATE burned by user
-        end_time: u64                           // NFT benefit expiry, synced with leaderboard cycle
     }
 
     // User rewards structure
@@ -97,13 +89,13 @@ module fate::leaderboard {
             grow_store
         };
         // Default level configurations (Lv1 to Lv7)
-        table::add(&mut leaderboard.level_configs, 1, LevelConfig { level: 1, checkin_bonus: 5, market_discount: 0, stake_weight: 0 });
-        table::add(&mut leaderboard.level_configs, 2, LevelConfig { level: 2, checkin_bonus: 10, market_discount: 10, stake_weight: 0 });
-        table::add(&mut leaderboard.level_configs, 3, LevelConfig { level: 3, checkin_bonus: 15, market_discount: 15, stake_weight: 0 });
-        table::add(&mut leaderboard.level_configs, 4, LevelConfig { level: 4, checkin_bonus: 20, market_discount: 20, stake_weight: 0 });
-        table::add(&mut leaderboard.level_configs, 5, LevelConfig { level: 5, checkin_bonus: 25, market_discount: 25, stake_weight: 10 });
-        table::add(&mut leaderboard.level_configs, 6, LevelConfig { level: 6, checkin_bonus: 30, market_discount: 30, stake_weight: 20 });
-        table::add(&mut leaderboard.level_configs, 7, LevelConfig { level: 7, checkin_bonus: 40, market_discount: 40, stake_weight: 30 });
+        table::add(&mut leaderboard.level_configs, 1, LevelConfig { level: 1, checkin_bonus: 5, raffle_discount: 0, stake_weight: 0 });
+        table::add(&mut leaderboard.level_configs, 2, LevelConfig { level: 2, checkin_bonus: 10, raffle_discount: 10, stake_weight: 0 });
+        table::add(&mut leaderboard.level_configs, 3, LevelConfig { level: 3, checkin_bonus: 15, raffle_discount: 15, stake_weight: 0 });
+        table::add(&mut leaderboard.level_configs, 4, LevelConfig { level: 4, checkin_bonus: 20, raffle_discount: 20, stake_weight: 0 });
+        table::add(&mut leaderboard.level_configs, 5, LevelConfig { level: 5, checkin_bonus: 25, raffle_discount: 25, stake_weight: 10 });
+        table::add(&mut leaderboard.level_configs, 6, LevelConfig { level: 6, checkin_bonus: 30, raffle_discount: 30, stake_weight: 20 });
+        table::add(&mut leaderboard.level_configs, 7, LevelConfig { level: 7, checkin_bonus: 40, raffle_discount: 40, stake_weight: 30 });
         // Default rank tiers (1-10: Lv7, 11-50: Lv6, etc.)
         table::add(&mut leaderboard.rank_tiers, 1, RankTier { min_rank: 1, max_rank: 10, level: 7 });
         table::add(&mut leaderboard.rank_tiers, 2, RankTier { min_rank: 11, max_rank: 50, level: 6 });
@@ -115,44 +107,32 @@ module fate::leaderboard {
         account::move_resource_to(admin, leaderboard);
     }
 
-    // Mint a new UserNFT for a user
-    fun mint_usernft(user: &signer) {
-        let user_addr = signer::address_of(user);
-        assert!(!account::exists_resource<UserNft>(user_addr), E_USER_ALREADY_EXISTS);
-        let leaderboard = account::borrow_resource<Leaderboard>(@fate);
-        account::move_resource_to(user, UserNft {
-            owner: user_addr,
-            level: 0,
-            checkin_bonus: 0,
-            market_discount: 0,
-            stake_weight: 0,
-            burn_amount: 0,
-            end_time: leaderboard.end_time
-        });
-    }
-
     // Burn FATE tokens to participate in the leaderboard
     public entry fun burn_fate(user: &signer, amount: u256) {
         let sender = signer::address_of(user);
-        if (!account::exists_resource<UserNft>(sender)) {
-            mint_usernft(user);
-        };
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
+
+        mint_usernft(user,leaderboard.end_time);
+
         assert!(leaderboard.alive && (leaderboard.end_time > now_seconds()), E_LEADERBOARD_NOT_ALIVE);
+
         let coin = account_coin_store::withdraw<FATE>(user, amount);
         leaderboard.total_burned = leaderboard.total_burned + amount;
+
         let treasury = object::borrow_mut(get_treasury());
         burn_coin(treasury, coin);
-        let usernft = account::borrow_mut_resource<UserNft>(sender);
+
         let current_amount = if (table::contains(&leaderboard.rankings, sender)) {
             *table::borrow(&leaderboard.rankings, sender)
         } else 0;
+
         table::upsert(&mut leaderboard.rankings, sender, current_amount + amount);
-        usernft.burn_amount = usernft.burn_amount + amount;
+
+        set_user_nft_burn_amount(sender,amount);
     }
 
     // Snapshot top 1000 users and update their NFTs
-    public entry fun snapshot_top_tiers(_: &mut Object<AdminCap>, top_users: vector<address>, top_ranks: vector<u64>) {
+    public entry fun snapshot_top_tiers(_: &mut Object<AdminCap>, top_users: vector<address>, top_ranks: vector<u64>,other_users: vector<address>) {
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
         assert!(leaderboard.alive, E_LEADERBOARD_NOT_ALIVE);
         assert!(length(&top_users) == length(&top_ranks) && length(&top_users) <= 1000, E_INVALID_INPUT_LENGTH);
@@ -165,23 +145,21 @@ module fate::leaderboard {
             let rank = *borrow(&top_ranks, i);
             let level = get_level_from_rank(leaderboard, rank);
             let config = table::borrow(&leaderboard.level_configs, level);
-            update_nft(user, config, leaderboard.end_time);
+            update_user_nft(user, config, leaderboard.end_time);
             i = i + 1;
         };
+        snapshot_others(other_users);
+        leaderboard.last_snapshot = now;
     }
 
     // Snapshot users beyond top 1000 and set them to Level 1
-    public entry fun snapshot_others(_: &mut Object<AdminCap>, other_users: vector<address>) {
+    fun snapshot_others(other_users: vector<address>) {
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
-        assert!(leaderboard.alive, E_LEADERBOARD_NOT_ALIVE);
-        let now = timestamp::now_seconds();
-        assert!(is_next_day(leaderboard.last_snapshot, now) && now <= leaderboard.end_time, E_INVALID_TIMESTAMP);
-
         let config_lv1 = table::borrow(&leaderboard.level_configs, 1);
         let j = 0;
         while (j < length(&other_users)) {
             let user = *borrow(&other_users, j);
-            update_nft(user, config_lv1, leaderboard.end_time);
+            update_user_nft(user, config_lv1, leaderboard.end_time);
             j = j + 1;
         };
     }
@@ -215,49 +193,63 @@ module fate::leaderboard {
         grow_reward_pool: u256,
         grow_weight: u64,
         fate_weight: u64
-    ): u256 {
+    ) {
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
-        let (total_grow_votes,_,_,_,_,_,_,_,_,_) = stake_by_grow_votes::query_pool_info();
+        let (total_grow_votes,_,_,_,_,_,_,_,_,_)= query_pool_info();
         let total_fate_burned = leaderboard.total_burned;
+
         let total_combined_ratio = 0;
         let i = 0;
-
         while (i < length(&users)) {
             let user = *borrow(&users, i);
-            let user_grow_votes = if (account::exists_resource<stake_by_grow_votes::StakeRecord>(user)) {
-                let (_, fate_grow_votes, stake_grow_votes, _, _) = stake_by_grow_votes::query_stake_info(user);
-                fate_grow_votes + stake_grow_votes
-            } else 0;
-            let user_fate_burned = if (account::exists_resource<UserNft>(user)) {
-                let usernft = account::borrow_resource<UserNft>(user);
-                usernft.burn_amount
+            let (_,fate_grow_votes,stake_grow_votes,_,_) = query_stake_info(user);
+            let user_grow_votes = fate_grow_votes + stake_grow_votes;
+            let user_fate_burned = if (check_user_nft(user)) {
+                let (_,_,_,burn_amount) = query_user_nft(user);
+                burn_amount
             } else 0;
 
-            let grow_ratio = if (total_grow_votes > 0) { user_grow_votes * 100 / total_grow_votes } else 0;
-            let fate_ratio = if (total_fate_burned > 0) { user_fate_burned * 100 / total_fate_burned } else 0;
-            let combined_ratio = if (grow_ratio == 0 && fate_ratio == 0) { 10000 } else { (grow_ratio * (grow_weight as u256) + fate_ratio * (fate_weight as u256)) / 100 };
-            total_combined_ratio = total_combined_ratio + combined_ratio;
+            let grow_ratio = if (total_grow_votes > 0) { (user_grow_votes * 10000) / total_grow_votes } else 0;
+            let fate_ratio = if (total_fate_burned > 0) { (user_fate_burned * 10000) / total_fate_burned } else 0;
+            let combined_ratio = if (grow_ratio == 0 && fate_ratio == 0) { 0 } else { (grow_ratio * (grow_weight as u256) + fate_ratio * (fate_weight as u256)) / 10000 };
+            if (combined_ratio > 0) {
+                total_combined_ratio = total_combined_ratio + combined_ratio;
+            };
+            i = i + 1;
+        };
 
-            // Cast length(&users) to u256 to match rgas_reward_pool and grow_reward_pool types
-            let users_length = (length(&users) as u256);
-            let rgas_reward = if (total_combined_ratio > 0) {
+        let j = 0;
+        while (j < length(&users)) {
+            let user = *borrow(&users, j);
+            let (_,fate_grow_votes,stake_grow_votes,_,_) = query_stake_info(user);
+            let user_grow_votes = fate_grow_votes + stake_grow_votes;
+            let user_fate_burned = if (check_user_nft(user)) {
+                let (_,_,_,burn_amount) = query_user_nft(user);
+                burn_amount
+            } else 0;
+
+            let grow_ratio = if (total_grow_votes > 0) { (user_grow_votes * 10000) / total_grow_votes } else 0;
+            let fate_ratio = if (total_fate_burned > 0) { (user_fate_burned * 10000) / total_fate_burned } else 0;
+            let combined_ratio = if (grow_ratio == 0 && fate_ratio == 0) { 0 } else { (grow_ratio * (grow_weight as u256) + fate_ratio * (fate_weight as u256)) / 10000 };
+
+            let rgas_reward = if (combined_ratio > 0) {
                 rgas_reward_pool * combined_ratio / total_combined_ratio
             } else {
-                rgas_reward_pool / users_length
+                0
             };
-            let grow_reward = if (total_combined_ratio > 0) {
+            let grow_reward = if (combined_ratio > 0) {
                 grow_reward_pool * combined_ratio / total_combined_ratio
             } else {
-                grow_reward_pool / users_length
+                0
             };
+
             table::upsert(&mut leaderboard.user_rewards, user, UserRewards {
                 rgas_amount: rgas_reward,
                 grow_amount: grow_reward,
                 is_claim: false
             });
-            i = i + 1;
+            j = j + 1;
         };
-        total_combined_ratio
     }
 
     // Claim allocated RGas and GROW rewards
@@ -313,13 +305,15 @@ module fate::leaderboard {
     }
 
     // Update user NFT with new level configuration
-    fun update_nft(user: address, config: &LevelConfig, end_time: u64) {
-        let nft = account::borrow_mut_resource<UserNft>(user);
-        nft.level = config.level;
-        nft.checkin_bonus = config.checkin_bonus;
-        nft.market_discount = config.market_discount;
-        nft.stake_weight = config.stake_weight;
-        nft.end_time = end_time;
+    fun update_user_nft(user: address, config: &LevelConfig, end_time: u64) {
+        update_nft(
+            user,
+            config.level,
+            config.checkin_bonus,
+            config.raffle_discount,
+            config.stake_weight,
+            end_time
+        );
     }
 
     // Update level configuration (admin only)
@@ -328,7 +322,7 @@ module fate::leaderboard {
         assert!(table::contains(&leaderboard.level_configs, level), E_LEVEL_NOT_FOUND);
         let config = table::borrow_mut(&mut leaderboard.level_configs, level);
         config.checkin_bonus = checkin_bonus;
-        config.market_discount = market_discount;
+        config.raffle_discount = market_discount;
         config.stake_weight = stake_weight;
     }
 
@@ -353,14 +347,16 @@ module fate::leaderboard {
     }
 
     // Query leaderboard information
+    #[view]
     public fun query_leaderboard(): &Leaderboard {
         let leaderboard = account::borrow_resource<Leaderboard>(@fate);
         leaderboard
     }
 
-    // Query user NFT information
-    public fun query_user_nft(user: address): &UserNft {
-        let usernft = account::borrow_resource<UserNft>(user);
-        usernft
+
+    #[test_only]
+    public fun test_init(admin: &signer) {
+        init(admin);
     }
+
 }

@@ -1,4 +1,5 @@
 module fate::raffle {
+    use std::signer;
     use moveos_std::object::Object;
     use fate::admin::AdminCap;
     use moveos_std::object;
@@ -8,6 +9,7 @@ module fate::raffle {
     use rooch_framework::account_coin_store;
     use fate::random::get_random;
     use fate::fate::{get_treasury, mint_coin, FATE, burn_coin};
+    use fate::user_nft::{check_user_nft, query_user_nft};
 
     friend fate::daily_check_in;
 
@@ -75,7 +77,7 @@ module fate::raffle {
 
     public entry fun get_check_in_raffle_by_fate(user: &signer){
         init_check_in_raffle_record(user);
-
+        let sender = signer::address_of(user);
         let checkinraffle = account::borrow_mut_resource<CheckInRaffle>(@fate);
         let checkInRaffleRecord = account::borrow_mut_resource<CheckInRaffleRecord>(address_of(user));
         let avg_price = (checkinraffle.grand_prize_duration * checkinraffle.grand_prize_weight +
@@ -84,8 +86,15 @@ module fate::raffle {
 
         let treasury = object::borrow_mut(get_treasury());
 
-        let cost_coin = account_coin_store::withdraw<FATE>(user, avg_price * ONE_FATE);
-        burn_coin(treasury,cost_coin);
+        if (check_user_nft(sender)){
+            let (_, raffle_discount, _, _) = query_user_nft(sender);
+            let boosted_share = avg_price * (100 - (raffle_discount as u256)) / 100;
+            let cost_coin = account_coin_store::withdraw<FATE>(user, boosted_share * ONE_FATE);
+            burn_coin(treasury,cost_coin);
+        }else {
+            let cost_coin = account_coin_store::withdraw<FATE>(user, avg_price * ONE_FATE);
+            burn_coin(treasury,cost_coin);
+        };
         checkInRaffleRecord.raffle_count = checkInRaffleRecord.raffle_count + 1;
         get_check_in_raffle(user);
     }
@@ -169,26 +178,15 @@ module fate::raffle {
     }
 
     #[view]
-    public fun query_check_in_raffle_view(): CheckInRaffleView {
+    public fun query_check_in_raffle_view(): &CheckInRaffle {
         let checkinraffle = account::borrow_resource<CheckInRaffle>(@fate);
-        CheckInRaffleView {
-            grand_prize_duration: checkinraffle.grand_prize_duration,
-            grand_prize_weight: checkinraffle.grand_prize_weight,
-            second_prize_duration: checkinraffle.second_prize_duration,
-            second_prize_weight: checkinraffle.second_prize_weight,
-            third_prize_duration: checkinraffle.third_prize_duration,
-            third_prize_weight: checkinraffle.third_prize_weight,
-            max_raffle_count_weight: checkinraffle.max_raffle_count_weight,
-        }
+        checkinraffle
     }
 
     #[view]
-    public fun query_check_in_raffle_record_view(user: address): CheckInRaffleRecordView {
+    public fun query_check_in_raffle_record_view(user: address): &CheckInRaffleRecord {
         let check_in_raffle_record = account::borrow_resource<CheckInRaffleRecord>(user);
-        CheckInRaffleRecordView{
-            user: check_in_raffle_record.user,
-            raffle_count: check_in_raffle_record.raffle_count
-        }
+        check_in_raffle_record
     }
 
     #[test_only]

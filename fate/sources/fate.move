@@ -9,7 +9,6 @@ module fate::fate {
     use rooch_framework::account_coin_store;
 
     friend fate::daily_check_in;
-    friend fate::market;
     friend fate::raffle;
     friend fate::stake_by_grow_votes;
     friend fate::leaderboard;

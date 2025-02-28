@@ -10,6 +10,7 @@ module fate::stake_by_grow_votes {
     use rooch_framework::account_coin_store;
     use grow_bitcoin::grow_information_v3::{Self, GrowProjectList};
     use fate::fate::{Self, mint_coin};
+    use fate::user_nft::{check_user_nft, query_user_nft};
 
     const ErrorNotAlive: u64 = 1;
     const ErrorAlreadyStaked: u64 = 2;
@@ -38,19 +39,6 @@ module fate::stake_by_grow_votes {
         stake_grow_votes: u256,
         last_harvest_timestamp: u64,
         accumulated_fate: u128,
-    }
-
-    struct StakePoolView has copy, drop {
-        total_staked_votes: u256,
-        last_update_timestamp: u64,
-        start_time: u64,
-        end_time: u64,
-        total_fate_supply: u256,
-        mining_duration_seconds: u64,
-        fate_per_day: u128,
-        total_mined_fate: u256,
-        release_per_second: u128,
-        alive: bool,
     }
 
     struct StakeRecordView has copy, drop {
@@ -188,7 +176,7 @@ module fate::stake_by_grow_votes {
         assert!(now_seconds < stake_pool.end_time, ErrorMiningEnded);
         let stake_record = account::borrow_mut_resource<StakeRecord>(sender);
         assert!(stake_record.fate_grow_votes > 0, ErrorZeroVotes);
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, now_seconds);
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, now_seconds,sender);
         stake_record.accumulated_fate = stake_record.accumulated_fate + accumulated_fate;
         let votes_to_stake = stake_record.fate_grow_votes;
         stake_record.stake_grow_votes = stake_record.stake_grow_votes + votes_to_stake;
@@ -207,7 +195,7 @@ module fate::stake_by_grow_votes {
         assert!(stake_record.stake_grow_votes > 0, ErrorNotStaked);
         let now_seconds = timestamp::now_seconds();
         let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time,sender);
         let total_fate = stake_record.accumulated_fate + accumulated_fate;
         let remaining_fate = stake_pool.total_fate_supply - stake_pool.total_mined_fate;
         let remaining_fate_u128 = (remaining_fate as u128);
@@ -242,7 +230,7 @@ module fate::stake_by_grow_votes {
         assert!(stake_record.stake_grow_votes > 0, ErrorNotStaked);
         let now_seconds = timestamp::now_seconds();
         let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time,sender);
         let total_fate = stake_record.accumulated_fate + accumulated_fate;
         if (total_fate > 0) {
             let remaining_fate = stake_pool.total_fate_supply - stake_pool.total_mined_fate;
@@ -262,15 +250,23 @@ module fate::stake_by_grow_votes {
         stake_pool.last_update_timestamp = effective_time;
     }
 
-    fun calculate_fate_rewards(stake_pool: &StakePool, stake_record: &StakeRecord, now_seconds: u64): u128 {
+    fun calculate_fate_rewards(stake_pool: &StakePool, stake_record: &StakeRecord, now_seconds: u64,user: address): u128 {
         if (stake_record.stake_grow_votes == 0 || stake_pool.total_staked_votes == 0 || now_seconds <= stake_record.last_harvest_timestamp || now_seconds < stake_pool.start_time) {
             return 0
         };
         let time_period = now_seconds - stake_record.last_harvest_timestamp;
         let total_release = stake_pool.release_per_second * (time_period as u128);
         let user_share = (stake_record.stake_grow_votes as u128) * total_release / (stake_pool.total_staked_votes as u128);
-        user_share
+
+        if (check_user_nft(user)){
+            let (_,_,stake_weight,_) = query_user_nft(user);
+            let boosted_share = user_share * (100 + (stake_weight as u128)) / 100;
+            return boosted_share
+        }else {
+            return user_share
+        }
     }
+
 
     fun init_stake_record(user: &signer) {
         if (!account::exists_resource<StakeRecord>(address_of(user))) {
@@ -286,19 +282,23 @@ module fate::stake_by_grow_votes {
 
     #[view]
     public fun query_stake_info(user: address): (address, u256, u256, u64, u128) {
-        let stake_pool = account::borrow_resource<StakePool>(@fate);
-        let stake_record = account::borrow_resource<StakeRecord>(user);
-        let now_seconds = timestamp::now_seconds();
-        let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
-        let total_fate = stake_record.accumulated_fate + accumulated_fate;
-        (
-            stake_record.user,
-            stake_record.fate_grow_votes,
-            stake_record.stake_grow_votes,
-            stake_record.last_harvest_timestamp,
-            total_fate
-        )
+        if (account::exists_resource<StakeRecord>(user)){
+            let stake_pool = account::borrow_resource<StakePool>(@fate);
+            let stake_record = account::borrow_resource<StakeRecord>(user);
+            let now_seconds = timestamp::now_seconds();
+            let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
+            let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time,user);
+            let total_fate = stake_record.accumulated_fate + accumulated_fate;
+            return (
+                stake_record.user,
+                stake_record.fate_grow_votes,
+                stake_record.stake_grow_votes,
+                stake_record.last_harvest_timestamp,
+                total_fate
+            )
+        }else {
+            return (user,0,0,0,0)
+        }
     }
 
     #[view]
@@ -324,7 +324,7 @@ module fate::stake_by_grow_votes {
         let stake_record = account::borrow_resource<StakeRecord>(user);
         let now_seconds = timestamp::now_seconds();
         let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time,user);
         let total_fate = stake_record.accumulated_fate + accumulated_fate;
         StakeRecordView{
             user: stake_record.user,
@@ -336,20 +336,9 @@ module fate::stake_by_grow_votes {
     }
 
     #[view]
-    public fun query_pool_info_view(): StakePoolView {
+    public fun query_pool_info_view(): &StakePool {
         let stake_pool = account::borrow_resource<StakePool>(@fate);
-        StakePoolView {
-            total_staked_votes: stake_pool.total_staked_votes,
-            last_update_timestamp: stake_pool.last_update_timestamp,
-            start_time: stake_pool.start_time,
-            end_time: stake_pool.end_time,
-            total_fate_supply: stake_pool.total_fate_supply,
-            mining_duration_seconds: stake_pool.mining_duration_seconds,
-            fate_per_day: stake_pool.fate_per_day,
-            total_mined_fate: stake_pool.total_mined_fate,
-            release_per_second: stake_pool.release_per_second,
-            alive: stake_pool.alive
-        }
+        stake_pool
     }
 
     #[view]
@@ -391,7 +380,7 @@ module fate::stake_by_grow_votes {
         assert!(stake_pool.alive, ErrorNotAlive);
         assert!(now_seconds < stake_pool.end_time, ErrorMiningEnded);
         assert!(stake_record.fate_grow_votes > 0, ErrorZeroVotes);
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, now_seconds);
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, now_seconds,sender);
         stake_record.accumulated_fate = stake_record.accumulated_fate + accumulated_fate;
         let votes_to_stake = stake_record.fate_grow_votes;
         stake_record.stake_grow_votes = stake_record.stake_grow_votes + votes_to_stake;
@@ -403,10 +392,10 @@ module fate::stake_by_grow_votes {
     }
 
     #[test_only]
-    public fun test_query_fate_rewards(stake_pool: &mut StakePool, stake_record: &mut StakeRecord): u128 {
+    public fun test_query_fate_rewards(stake_pool: &mut StakePool, stake_record: &mut StakeRecord,user: address): u128 {
         let now_seconds = timestamp::now_seconds();
         let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time,user);
         stake_record.accumulated_fate + accumulated_fate
     }
 
@@ -417,7 +406,7 @@ module fate::stake_by_grow_votes {
         assert!(stake_pool.alive, ErrorNotAlive);
         assert!(stake_record.stake_grow_votes > 0, ErrorNotStaked);
         let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time,sender);
         let total_fate = stake_record.accumulated_fate + accumulated_fate;
         if (total_fate > 0) {
             let remaining_fate = stake_pool.total_fate_supply - stake_pool.total_mined_fate;
@@ -444,7 +433,7 @@ module fate::stake_by_grow_votes {
         assert!(stake_record.stake_grow_votes > 0, ErrorNotStaked);
         let now_seconds = timestamp::now_seconds();
         let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
-        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time);
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time,sender);
         let total_fate = stake_record.accumulated_fate + accumulated_fate;
         let remaining_fate = stake_pool.total_fate_supply - stake_pool.total_mined_fate;
         let remaining_fate_u128 = (remaining_fate as u128);
