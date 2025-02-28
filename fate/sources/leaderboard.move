@@ -291,6 +291,20 @@ module fate::leaderboard {
         coin_store::deposit(&mut leaderboard.grow_store, grow_coin);
     }
 
+    // Admin deposits RGas into the reward pool
+    public entry fun withdraw_rgas_coin_from_module_address(account: &signer, amount: u256, _admin: &mut Object<AdminCap>) {
+        let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
+        let rgas_coin = coin_store::withdraw<RGas>(&mut leaderboard.rgas_store, amount);
+        account_coin_store::deposit(signer::address_of(account), rgas_coin);
+    }
+
+    // Admin deposits GROW into the reward pool
+    public entry fun withdraw_grow_coin_from_module_address(account: &signer, amount: u256, _admin: &mut Object<AdminCap>) {
+        let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
+        let grow_coin = coin_store::withdraw<GROW>(&mut leaderboard.grow_store, amount);
+        account_coin_store::deposit(signer::address_of(account), grow_coin);
+    }
+
     // Get level based on rank
     fun get_level_from_rank(leaderboard: &Leaderboard, rank: u64): u64 {
         let i = 1;
