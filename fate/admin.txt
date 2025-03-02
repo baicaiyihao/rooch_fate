@@ -1,0 +1,20 @@
+modify_stake_pool
+rooch move run --function default::stake_by_grow_votes::modify_stake_pool --args "object:0x728d34166aadf3a4922b7eb7b9ee583e60a3ccb0e42706c94e139f1770249c0b" --args "u256:518400000" --args "u64:1740843687" --args "u64:1746115200"
+
+set_project_name
+rooch move run --function default::stake_by_grow_votes::set_project_name --args "object:" --args "string:"
+
+set_check_in_raffle
+rooch move run --function default::raffle::set_check_in_raffle --args "object:" --args "u256:" --args "u256:" --args "u256:" --args "u256:" --args "u256:" --args "u256:" --args "u64:"
+
+update_config
+rooch move run --function default::daily_check_in::update_config --args "object:" --args "string:" --args "u256:" --args "u64:"
+
+rooch move run --function default::leaderboard::set_leaderboard_endtime --args "object:0x9e73c821e803ae99c312882dc70d2e9aa61552da3718c8e2f2c2c3983621274c" --args "u64:1746115200"
+
+
+rooch move run --function default::leaderboard::burn_fate --args "u256:1000000"
+
+
+rooch move run --function default::user_nft::query_user_nft_view
+
