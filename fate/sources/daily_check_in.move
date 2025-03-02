@@ -7,7 +7,7 @@ module fate::daily_check_in {
     use moveos_std::account;
     use moveos_std::object::{Self, Object};
     use moveos_std::signer;
-    use moveos_std::timestamp::{Self};
+    use moveos_std::timestamp::{Self, now_seconds};
     use rooch_framework::account_coin_store;
     use fate::fate::{get_treasury, mint_coin};
     use fate::user_nft::{check_user_nft, query_user_nft};
@@ -155,10 +155,15 @@ module fate::daily_check_in {
         userCheckIn.total_sign_in_days = userCheckIn.total_sign_in_days + 1;
         let treasury = object::borrow_mut(get_treasury());
         if (check_user_nft(sender)){
-            let (checkin_bonus, _, _, _) = query_user_nft(sender);
-            let boosted_share = reward * (100 + (checkin_bonus as u256)) / 100;
-            let coin = mint_coin(treasury, boosted_share * ONE_FATE);
-            account_coin_store::deposit(sender, coin);
+            let (_,checkin_bonus, _, _, _,endtime) = query_user_nft(sender);
+            if(endtime > now_seconds()){
+                let boosted_share = reward * (100 + (checkin_bonus as u256)) / 100;
+                let coin = mint_coin(treasury, boosted_share * ONE_FATE);
+                account_coin_store::deposit(sender, coin);
+            }else {
+                let coin = mint_coin(treasury, reward * ONE_FATE);
+                account_coin_store::deposit(sender, coin);
+            }
         }else {
             let coin = mint_coin(treasury, reward * ONE_FATE);
             account_coin_store::deposit(sender, coin);

@@ -91,10 +91,10 @@ module fate::user_nft {
 
     // Query user NFT information
     #[view]
-    public fun query_user_nft(user: address): (u64, u64, u64, u256) {
+    public fun query_user_nft(user: address): (u64, u64, u64, u64, u256, u64) {
         assert!(account::exists_resource<UserNft>(user), E_NFT_NOT_FOUND);
         let usernft = account::borrow_resource<UserNft>(user);
-        (usernft.checkin_bonus, usernft.raffle_discount, usernft.stake_weight, usernft.burn_amount)
+        (usernft.level,usernft.checkin_bonus, usernft.raffle_discount, usernft.stake_weight, usernft.burn_amount,usernft.end_time)
     }
 
     #[view]

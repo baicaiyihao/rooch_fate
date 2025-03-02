@@ -82,8 +82,8 @@ module fate::leaderboard {
             rank_tiers: table::new(),
             user_rewards: table::new(),
             last_snapshot: now,
-            end_time: now + 30 * 24 * 60 * 60, // Default cycle: 30 days
-            alive: true,
+            end_time: 0, // Default cycle: 30 days
+            alive: false,
             total_burned: 0,
             rgas_store,
             grow_store
@@ -111,7 +111,6 @@ module fate::leaderboard {
     public entry fun burn_fate(user: &signer, amount: u256) {
         let sender = signer::address_of(user);
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
-
         mint_usernft(user,leaderboard.end_time);
 
         assert!(leaderboard.alive && (leaderboard.end_time > now_seconds()), E_LEADERBOARD_NOT_ALIVE);
@@ -205,7 +204,7 @@ module fate::leaderboard {
             let (_,fate_grow_votes,stake_grow_votes,_,_) = query_stake_info(user);
             let user_grow_votes = fate_grow_votes + stake_grow_votes;
             let user_fate_burned = if (check_user_nft(user)) {
-                let (_,_,_,burn_amount) = query_user_nft(user);
+                let (_,_,_,_,burn_amount,_) = query_user_nft(user);
                 burn_amount
             } else 0;
 
@@ -224,7 +223,7 @@ module fate::leaderboard {
             let (_,fate_grow_votes,stake_grow_votes,_,_) = query_stake_info(user);
             let user_grow_votes = fate_grow_votes + stake_grow_votes;
             let user_fate_burned = if (check_user_nft(user)) {
-                let (_,_,_,burn_amount) = query_user_nft(user);
+                let (_,_,_,_,burn_amount,_) = query_user_nft(user);
                 burn_amount
             } else 0;
 

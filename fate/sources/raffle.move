@@ -1,5 +1,6 @@
 module fate::raffle {
     use std::signer;
+    use moveos_std::timestamp::now_seconds;
     use moveos_std::object::Object;
     use fate::admin::AdminCap;
     use moveos_std::object;
@@ -87,10 +88,15 @@ module fate::raffle {
         let treasury = object::borrow_mut(get_treasury());
 
         if (check_user_nft(sender)){
-            let (_, raffle_discount, _, _) = query_user_nft(sender);
-            let boosted_share = avg_price * (100 - (raffle_discount as u256)) / 100;
-            let cost_coin = account_coin_store::withdraw<FATE>(user, boosted_share * ONE_FATE);
-            burn_coin(treasury,cost_coin);
+            let (_, _, raffle_discount, _, _,endtime) = query_user_nft(sender);
+            if(endtime > now_seconds()){
+                let boosted_share = avg_price * (100 - (raffle_discount as u256)) / 100;
+                let cost_coin = account_coin_store::withdraw<FATE>(user, boosted_share * ONE_FATE);
+                burn_coin(treasury,cost_coin);
+            }else {
+                let cost_coin = account_coin_store::withdraw<FATE>(user, avg_price * ONE_FATE);
+                burn_coin(treasury,cost_coin);
+            }
         }else {
             let cost_coin = account_coin_store::withdraw<FATE>(user, avg_price * ONE_FATE);
             burn_coin(treasury,cost_coin);

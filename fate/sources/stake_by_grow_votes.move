@@ -108,30 +108,21 @@ module fate::stake_by_grow_votes {
         let stake_pool = account::borrow_mut_resource<StakePool>(@fate);
         let now_seconds = timestamp::now_seconds();
         assert!(stake_pool.end_time == 0 || now_seconds > stake_pool.end_time, ErrorMiningNotEnded);
-        assert!(new_total_fate_supply > 0u256, ErrorInvalidParams);
-        assert!(new_end_time > new_start_time || (new_start_time == 0 && new_end_time == 0), ErrorInvalidParams);
-        assert!(new_start_time >= now_seconds || new_start_time == 0, ErrorInvalidParams);
+        assert!(new_total_fate_supply > 0, ErrorInvalidParams);
+        assert!(new_end_time > new_start_time, ErrorInvalidParams);
 
         stake_pool.total_fate_supply = new_total_fate_supply;
         stake_pool.start_time = new_start_time;
         stake_pool.end_time = new_end_time;
 
-        if (new_start_time != 0 && new_end_time != 0) {
-            let duration_seconds = ((new_end_time - new_start_time) as u128);
-            assert!(duration_seconds > 0, ErrorInvalidParams);
-            let total_fate_supply_u128 = (new_total_fate_supply as u128);
+        let duration_seconds = ((new_end_time - new_start_time) as u128);
+        assert!(duration_seconds > 0, ErrorInvalidParams);
+        let total_fate_supply_u128 = (new_total_fate_supply as u128);
 
-            stake_pool.mining_duration_seconds = (duration_seconds as u64);
-            stake_pool.release_per_second = total_fate_supply_u128 / duration_seconds;
-            stake_pool.fate_per_day = total_fate_supply_u128 / (duration_seconds / 86400u128);
-            stake_pool.alive = true;
-        } else {
-            stake_pool.mining_duration_seconds = 0;
-            stake_pool.release_per_second = 0;
-            stake_pool.fate_per_day = 0;
-            stake_pool.alive = false;
-        };
-
+        stake_pool.mining_duration_seconds = (duration_seconds as u64);
+        stake_pool.release_per_second = total_fate_supply_u128 / duration_seconds;
+        stake_pool.fate_per_day = total_fate_supply_u128 / (duration_seconds / 86400u128);
+        stake_pool.alive = true;
         stake_pool.last_update_timestamp = now_seconds;
         stake_pool.total_staked_votes = 0u256;
         stake_pool.total_mined_fate = 0u256;
@@ -172,7 +163,7 @@ module fate::stake_by_grow_votes {
         let sender = signer::address_of(user);
         let now_seconds = timestamp::now_seconds();
         let stake_pool = account::borrow_mut_resource<StakePool>(@fate);
-        assert!(stake_pool.alive, ErrorNotAlive);
+        assert!(stake_pool.alive && now_seconds >= stake_pool.start_time, ErrorNotAlive);
         assert!(now_seconds < stake_pool.end_time, ErrorMiningEnded);
         let stake_record = account::borrow_mut_resource<StakeRecord>(sender);
         assert!(stake_record.fate_grow_votes > 0, ErrorZeroVotes);
@@ -251,17 +242,18 @@ module fate::stake_by_grow_votes {
     }
 
     fun calculate_fate_rewards(stake_pool: &StakePool, stake_record: &StakeRecord, now_seconds: u64,user: address): u128 {
-        if (stake_record.stake_grow_votes == 0 || stake_pool.total_staked_votes == 0 || now_seconds <= stake_record.last_harvest_timestamp || now_seconds < stake_pool.start_time) {
-            return 0
-        };
         let time_period = now_seconds - stake_record.last_harvest_timestamp;
         let total_release = stake_pool.release_per_second * (time_period as u128);
         let user_share = (stake_record.stake_grow_votes as u128) * total_release / (stake_pool.total_staked_votes as u128);
 
         if (check_user_nft(user)){
-            let (_,_,stake_weight,_) = query_user_nft(user);
-            let boosted_share = user_share * (100 + (stake_weight as u128)) / 100;
-            return boosted_share
+            let (_,_,_,stake_weight,_,endtime) = query_user_nft(user);
+            if(endtime > now_seconds){
+                let boosted_share = user_share * (100 + (stake_weight as u128)) / 100;
+                return boosted_share
+            }else {
+                return user_share
+            }
         }else {
             return user_share
         }
