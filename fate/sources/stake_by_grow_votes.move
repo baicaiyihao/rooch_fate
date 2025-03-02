@@ -108,30 +108,21 @@ module fate::stake_by_grow_votes {
         let stake_pool = account::borrow_mut_resource<StakePool>(@fate);
         let now_seconds = timestamp::now_seconds();
         assert!(stake_pool.end_time == 0 || now_seconds > stake_pool.end_time, ErrorMiningNotEnded);
-        assert!(new_total_fate_supply > 0u256, ErrorInvalidParams);
-        assert!(new_end_time > new_start_time || (new_start_time == 0 && new_end_time == 0), ErrorInvalidParams);
-        assert!(new_start_time >= now_seconds || new_start_time == 0, ErrorInvalidParams);
+        assert!(new_total_fate_supply > 0, ErrorInvalidParams);
+        assert!(new_end_time > new_start_time, ErrorInvalidParams);
 
         stake_pool.total_fate_supply = new_total_fate_supply;
         stake_pool.start_time = new_start_time;
         stake_pool.end_time = new_end_time;
 
-        if (new_start_time != 0 && new_end_time != 0) {
-            let duration_seconds = ((new_end_time - new_start_time) as u128);
-            assert!(duration_seconds > 0, ErrorInvalidParams);
-            let total_fate_supply_u128 = (new_total_fate_supply as u128);
+        let duration_seconds = ((new_end_time - new_start_time) as u128);
+        assert!(duration_seconds > 0, ErrorInvalidParams);
+        let total_fate_supply_u128 = (new_total_fate_supply as u128);
 
-            stake_pool.mining_duration_seconds = (duration_seconds as u64);
-            stake_pool.release_per_second = total_fate_supply_u128 / duration_seconds;
-            stake_pool.fate_per_day = total_fate_supply_u128 / (duration_seconds / 86400u128);
-            stake_pool.alive = true;
-        } else {
-            stake_pool.mining_duration_seconds = 0;
-            stake_pool.release_per_second = 0;
-            stake_pool.fate_per_day = 0;
-            stake_pool.alive = false;
-        };
-
+        stake_pool.mining_duration_seconds = (duration_seconds as u64);
+        stake_pool.release_per_second = total_fate_supply_u128 / duration_seconds;
+        stake_pool.fate_per_day = total_fate_supply_u128 / (duration_seconds / 86400u128);
+        stake_pool.alive = true;
         stake_pool.last_update_timestamp = now_seconds;
         stake_pool.total_staked_votes = 0u256;
         stake_pool.total_mined_fate = 0u256;
@@ -164,7 +155,6 @@ module fate::stake_by_grow_votes {
             0u256
         };
         stake_record.fate_grow_votes = current_unstaked + new_votes;
-
         emit(VoteUpdateEvent { user: sender, new_votes, total_votes });
     }
 
