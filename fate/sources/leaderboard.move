@@ -2,7 +2,6 @@ module fate::leaderboard {
     use std::signer;
     use std::vector::{length, borrow};
     use moveos_std::timestamp::now_seconds;
-    use fate::utils::is_next_day;
     use moveos_std::table::Table;
     use fate::admin::AdminCap;
     use fate::fate::{FATE, burn_coin, get_treasury};
@@ -137,7 +136,7 @@ module fate::leaderboard {
         assert!(leaderboard.alive, E_LEADERBOARD_NOT_ALIVE);
         assert!(length(&top_users) == length(&top_ranks) && length(&top_users) <= 1000, E_INVALID_INPUT_LENGTH);
         let now = timestamp::now_seconds();
-        assert!(is_next_day(leaderboard.last_snapshot, now) && now <= leaderboard.end_time, E_INVALID_TIMESTAMP);
+        assert!(now > leaderboard.last_snapshot && now <= leaderboard.end_time, E_INVALID_TIMESTAMP);
 
         let i = 0;
         while (i < length(&top_users)) {
@@ -186,7 +185,7 @@ module fate::leaderboard {
         calculate_and_fill_rewards(users, rgas_reward_pool, grow_reward_pool, grow_weight, fate_weight);
     }
 
-    // Calculate and store rewards based on GROW votes and FATE burns
+    // Calculate and store rewards based on GROW votes and FATE burns, optimized for partial user lists
     fun calculate_and_fill_rewards(
         users: vector<address>,
         rgas_reward_pool: u256,
@@ -195,60 +194,50 @@ module fate::leaderboard {
         fate_weight: u64
     ) {
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
-        let (total_grow_votes,_,_,_,_,_,_,_,_,_)= query_pool_info();
+        let (total_grow_votes, _, _, _, _, _, _, _, _, _) = query_pool_info();
         let total_fate_burned = leaderboard.total_burned;
 
-        let total_combined_ratio = 0;
         let i = 0;
         while (i < length(&users)) {
             let user = *borrow(&users, i);
-            let (_,fate_grow_votes,stake_grow_votes,_,_) = query_stake_info(user);
+            let (_, fate_grow_votes, stake_grow_votes, _, _) = query_stake_info(user);
             let user_grow_votes = fate_grow_votes + stake_grow_votes;
             let user_fate_burned = if (check_user_nft(user)) {
-                let (_,_,_,burn_amount) = query_user_nft(user);
+                let (_, _, _, burn_amount) = query_user_nft(user);
                 burn_amount
             } else 0;
 
+            // Calculate ratios with amplification to avoid precision loss
             let grow_ratio = if (total_grow_votes > 0) { (user_grow_votes * 10000) / total_grow_votes } else 0;
             let fate_ratio = if (total_fate_burned > 0) { (user_fate_burned * 10000) / total_fate_burned } else 0;
-            let combined_ratio = if (grow_ratio == 0 && fate_ratio == 0) { 0 } else { (grow_ratio * (grow_weight as u256) + fate_ratio * (fate_weight as u256)) / 10000 };
-            if (combined_ratio > 0) {
-                total_combined_ratio = total_combined_ratio + combined_ratio;
+
+            // Weighted combined ratio
+            let combined_ratio = if (grow_ratio == 0 && fate_ratio == 0) {
+                0
+            } else {
+                (grow_ratio * (grow_weight as u256) + fate_ratio * (fate_weight as u256)) / 10000
             };
-            i = i + 1;
-        };
 
-        let j = 0;
-        while (j < length(&users)) {
-            let user = *borrow(&users, j);
-            let (_,fate_grow_votes,stake_grow_votes,_,_) = query_stake_info(user);
-            let user_grow_votes = fate_grow_votes + stake_grow_votes;
-            let user_fate_burned = if (check_user_nft(user)) {
-                let (_,_,_,burn_amount) = query_user_nft(user);
-                burn_amount
-            } else 0;
-
-            let grow_ratio = if (total_grow_votes > 0) { (user_grow_votes * 10000) / total_grow_votes } else 0;
-            let fate_ratio = if (total_fate_burned > 0) { (user_fate_burned * 10000) / total_fate_burned } else 0;
-            let combined_ratio = if (grow_ratio == 0 && fate_ratio == 0) { 0 } else { (grow_ratio * (grow_weight as u256) + fate_ratio * (fate_weight as u256)) / 10000 };
-
+            // Directly calculate rewards based on the combined ratio
             let rgas_reward = if (combined_ratio > 0) {
-                rgas_reward_pool * combined_ratio / total_combined_ratio
+                (rgas_reward_pool * combined_ratio) / 10000
             } else {
                 0
             };
             let grow_reward = if (combined_ratio > 0) {
-                grow_reward_pool * combined_ratio / total_combined_ratio
+                (grow_reward_pool * combined_ratio) / 10000
             } else {
                 0
             };
 
+            // Store the rewards for the user
             table::upsert(&mut leaderboard.user_rewards, user, UserRewards {
                 rgas_amount: rgas_reward,
                 grow_amount: grow_reward,
                 is_claim: false
             });
-            j = j + 1;
+
+            i = i + 1;
         };
     }
 

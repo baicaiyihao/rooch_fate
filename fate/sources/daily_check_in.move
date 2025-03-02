@@ -15,7 +15,6 @@ module fate::daily_check_in {
     const Err_ALREADY_CHECKED_IN: u64 = 101;
     const Err_CHECKED_IN_RAFFLE: u64 = 102;
     const Err_OUT_OF_CONTINUE_DAYS: u64 = 103;
-    const ONE_FATE: u256 = 1000000;
 
     struct Config has key {
         daily_rewards: vector<u256>,
@@ -81,7 +80,7 @@ module fate::daily_check_in {
             userCheckIn.total_sign_in_days = userCheckIn.total_sign_in_days + 1;
             let treasury = object::borrow_mut(get_treasury());
             let reward = *borrow(&config.daily_rewards, userCheckIn.continue_days);
-            let coin = mint_coin(treasury, reward * ONE_FATE);
+            let coin = mint_coin(treasury, reward);
             account_coin_store::deposit(sender, coin);
             userCheckIn.continue_days = userCheckIn.continue_days + 1;
         } else {
@@ -157,10 +156,10 @@ module fate::daily_check_in {
         if (check_user_nft(sender)){
             let (checkin_bonus, _, _, _) = query_user_nft(sender);
             let boosted_share = reward * (100 + (checkin_bonus as u256)) / 100;
-            let coin = mint_coin(treasury, boosted_share * ONE_FATE);
+            let coin = mint_coin(treasury, boosted_share);
             account_coin_store::deposit(sender, coin);
         }else {
-            let coin = mint_coin(treasury, reward * ONE_FATE);
+            let coin = mint_coin(treasury, reward);
             account_coin_store::deposit(sender, coin);
         }
     }

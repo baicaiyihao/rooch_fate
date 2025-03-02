@@ -15,8 +15,6 @@ module fate::raffle {
 
     const Err_Not_enough_raffle_times: u64 = 101;
 
-    const ONE_FATE: u256 = 1000000;
-
     struct CheckInRaffle has key {
         grand_prize_duration: u256,
         second_prize_duration: u256,
@@ -89,10 +87,10 @@ module fate::raffle {
         if (check_user_nft(sender)){
             let (_, raffle_discount, _, _) = query_user_nft(sender);
             let boosted_share = avg_price * (100 - (raffle_discount as u256)) / 100;
-            let cost_coin = account_coin_store::withdraw<FATE>(user, boosted_share * ONE_FATE);
+            let cost_coin = account_coin_store::withdraw<FATE>(user, boosted_share);
             burn_coin(treasury,cost_coin);
         }else {
-            let cost_coin = account_coin_store::withdraw<FATE>(user, avg_price * ONE_FATE);
+            let cost_coin = account_coin_store::withdraw<FATE>(user, avg_price);
             burn_coin(treasury,cost_coin);
         };
         checkInRaffleRecord.raffle_count = checkInRaffleRecord.raffle_count + 1;
@@ -106,7 +104,7 @@ module fate::raffle {
         assert!(checkInRaffleRecord.raffle_count >= checkinraffle.max_raffle_count_weight,Err_Not_enough_raffle_times);
         checkInRaffleRecord.raffle_count = checkInRaffleRecord.raffle_count - checkinraffle.max_raffle_count_weight;
         let treasury = object::borrow_mut(get_treasury());
-        let coin = mint_coin(treasury,checkinraffle.grand_prize_duration * ONE_FATE);
+        let coin = mint_coin(treasury,checkinraffle.grand_prize_duration);
         account_coin_store::deposit(sender, coin);
     }
 
@@ -118,13 +116,13 @@ module fate::raffle {
         let treasury = object::borrow_mut(get_treasury());
 
         if (random_value <= checkinraffle.grand_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.grand_prize_duration * ONE_FATE);
+            let coin = mint_coin(treasury,checkinraffle.grand_prize_duration);
             account_coin_store::deposit(sender, coin);
         } else if (random_value <= checkinraffle.grand_prize_weight + checkinraffle.second_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.second_prize_duration * ONE_FATE);
+            let coin = mint_coin(treasury,checkinraffle.second_prize_duration);
             account_coin_store::deposit(sender, coin);
         } else if (random_value <= checkinraffle.grand_prize_weight + checkinraffle.second_prize_weight + checkinraffle.third_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.third_prize_duration * ONE_FATE);
+            let coin = mint_coin(treasury,checkinraffle.third_prize_duration);
             account_coin_store::deposit(sender, coin);
         };
 

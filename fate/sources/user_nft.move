@@ -1,9 +1,8 @@
 module fate::user_nft {
     use std::signer;
-    use std::vector;
+    use std::string;
     use moveos_std::account;
     use moveos_std::display;
-    use std::string::{utf8};
 
     friend fate::leaderboard;
 
@@ -22,25 +21,10 @@ module fate::user_nft {
     }
 
     fun init() {
-        let keys = vector[
-            utf8(b"name"),
-            utf8(b"description"),
-            utf8(b"image_url")
-        ];
-        let values = vector[
-            utf8(b"FateX NFT"),
-            utf8(b"FateX User NFT with level {level} benefits"),
-            utf8(b"https://fatex.zone/nft/user_level_{level}.png")
-        ];
-
         let dis = display::display<UserNft>();
-        let key_len = vector::length(&keys);
-        while (key_len > 0) {
-            let key = vector::pop_back(&mut keys);
-            let value = vector::pop_back(&mut values);
-            display::set_value(dis, key, value);
-            key_len = key_len - 1;
-        }
+        display::set_value(dis, string::utf8(b"name"), string::utf8(b"FateX NFT"));
+        display::set_value(dis, string::utf8(b"description"), string::utf8(b"FateX User NFT with level {level} benefits"));
+        display::set_value(dis, string::utf8(b"uri"), string::utf8(b"https://fatex.zone/nft/user_level_{level}.png"));
     }
 
     // Mint a new UserNFT for a user

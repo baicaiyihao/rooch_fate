@@ -21,6 +21,7 @@ module fate::test_stake_and_harvest {
         fate::admin::test_init();
         fate::stake_by_grow_votes::test_init(sender);
 
+
         let sender_addr = signer::address_of(sender);
         let mock_votes = 1000u256;
 
@@ -50,7 +51,7 @@ module fate::test_stake_and_harvest {
         fast_forward_seconds_for_test(100);
         let now = test_query_time();
         assert!(now >= 1740370704, 101);
-        let rewards = fate::stake_by_grow_votes::test_query_fate_rewards(stake_pool, stake_record);
+        let rewards = fate::stake_by_grow_votes::test_query_fate_rewards(stake_pool, stake_record,sender_addr);
         assert!(rewards == 100000000000, 3);
 
         fate::stake_by_grow_votes::test_harvest(sender, stake_pool, stake_record);
@@ -67,7 +68,7 @@ module fate::test_stake_and_harvest {
         assert!(fate_grow_votes == 0, 1);
         assert!(stake_grow_votes == 2000, 2);
         fast_forward_seconds_for_test(100);
-        let rewards = fate::stake_by_grow_votes::test_query_fate_rewards(stake_pool, stake_record);
+        let rewards = fate::stake_by_grow_votes::test_query_fate_rewards(stake_pool, stake_record,sender_addr);
         assert!(rewards == 100000000000, 3);
         fate::stake_by_grow_votes::test_harvest(sender, stake_pool, stake_record);
         let balance = account_coin_store::balance<FATE>(sender_addr);
@@ -83,7 +84,7 @@ module fate::test_stake_and_harvest {
         assert!(fate_grow_votes == 0, 1);
         assert!(stake_grow_votes == 3000, 2);
         fast_forward_seconds_for_test(100);
-        let rewards = fate::stake_by_grow_votes::test_query_fate_rewards(stake_pool, stake_record);
+        let rewards = fate::stake_by_grow_votes::test_query_fate_rewards(stake_pool, stake_record,sender_addr);
         assert!(rewards == 100000000000, 3);
         fate::stake_by_grow_votes::test_unstake(sender, stake_pool, stake_record);
         let balance = account_coin_store::balance<FATE>(sender_addr);
