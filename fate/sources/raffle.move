@@ -1,11 +1,13 @@
-module fate::raffle {
+module fate::raffle_v2 {
     use std::signer;
+    use fate::utils::is_next_day;
     use moveos_std::object::Object;
     use fate::admin::AdminCap;
     use moveos_std::object;
     use moveos_std::signer::address_of;
     use moveos_std::event::emit;
     use moveos_std::account;
+    use moveos_std::timestamp;
     use rooch_framework::account_coin_store;
     use fate::random::get_random;
     use fate::fate::{get_treasury, mint_coin, FATE, burn_coin};
@@ -14,6 +16,7 @@ module fate::raffle {
     friend fate::daily_check_in;
 
     const Err_Not_enough_raffle_times: u64 = 101;
+    const Err_Daily_Raffle_Limit_Exceeded: u64 = 102;
 
     struct CheckInRaffle has key {
         grand_prize_duration: u256,
@@ -22,27 +25,15 @@ module fate::raffle {
         grand_prize_weight: u256,
         second_prize_weight: u256,
         third_prize_weight: u256,
-        max_raffle_count_weight: u64
+        max_raffle_count_weight: u64,
+        daily_max_raffle_count: u64,
     }
 
-    struct CheckInRaffleRecord has key{
+    struct CheckInRaffleRecord has key {
         user: address,
-        raffle_count: u64
-    }
-
-    struct CheckInRaffleView has copy, drop {
-        grand_prize_duration: u256,
-        second_prize_duration: u256,
-        third_prize_duration: u256,
-        grand_prize_weight: u256,
-        second_prize_weight: u256,
-        third_prize_weight: u256,
-        max_raffle_count_weight: u64
-    }
-
-    struct CheckInRaffleRecordView has copy, drop{
-        user: address,
-        raffle_count: u64
+        raffle_count: u64,
+        daily_raffle_count: u64,
+        last_raffle_date: u64,
     }
 
     struct CheckInRaffleEmit has copy, drop {
@@ -50,83 +41,97 @@ module fate::raffle {
         result: u256,
     }
 
-    fun init(admin: &signer){
-        let checkinraffle = CheckInRaffle{
+    fun init(admin: &signer) {
+        let checkinraffle = CheckInRaffle {
             grand_prize_duration: 1000,
             second_prize_duration: 500,
             third_prize_duration: 150,
             grand_prize_weight: 5,
             second_prize_weight: 25,
             third_prize_weight: 70,
-            max_raffle_count_weight: 10
+            max_raffle_count_weight: 10,
+            daily_max_raffle_count: 50,
         };
         account::move_resource_to(admin, checkinraffle);
     }
 
-    fun init_check_in_raffle_record(admin: &signer){
+    fun init_check_in_raffle_record(admin: &signer) {
         if (!account::exists_resource<CheckInRaffleRecord>(address_of(admin))) {
             let checkInRaffleRecord = CheckInRaffleRecord {
                 user: address_of(admin),
-                raffle_count: 0
+                raffle_count: 0,
+                daily_raffle_count: 0,
+                last_raffle_date: 0,
             };
             account::move_resource_to(admin, checkInRaffleRecord);
         }
     }
 
-    public entry fun get_check_in_raffle_by_fate(user: &signer){
+    public entry fun get_check_in_raffle_by_fate(user: &signer) {
         init_check_in_raffle_record(user);
         let sender = signer::address_of(user);
         let checkinraffle = account::borrow_mut_resource<CheckInRaffle>(@fate);
         let checkInRaffleRecord = account::borrow_mut_resource<CheckInRaffleRecord>(address_of(user));
+
+        let current_time = timestamp::now_seconds();
+        let last_date = checkInRaffleRecord.last_raffle_date;
+        if (is_next_day(last_date, current_time)) {
+            checkInRaffleRecord.daily_raffle_count = 0;
+        };
+
+        assert!(checkInRaffleRecord.daily_raffle_count < checkinraffle.daily_max_raffle_count, Err_Daily_Raffle_Limit_Exceeded);
+
         let avg_price = (checkinraffle.grand_prize_duration * checkinraffle.grand_prize_weight +
             checkinraffle.second_prize_duration * checkinraffle.second_prize_weight +
             checkinraffle.third_prize_duration * checkinraffle.third_prize_weight) / 100;
 
         let treasury = object::borrow_mut(get_treasury());
 
-        if (check_user_nft(sender)){
+        if (check_user_nft(sender)) {
             let (_, raffle_discount, _, _) = query_user_nft(sender);
             let boosted_share = avg_price * (100 - (raffle_discount as u256)) / 100;
             let cost_coin = account_coin_store::withdraw<FATE>(user, boosted_share);
-            burn_coin(treasury,cost_coin);
-        }else {
+            burn_coin(treasury, cost_coin);
+        } else {
             let cost_coin = account_coin_store::withdraw<FATE>(user, avg_price);
-            burn_coin(treasury,cost_coin);
+            burn_coin(treasury, cost_coin);
         };
+
         checkInRaffleRecord.raffle_count = checkInRaffleRecord.raffle_count + 1;
+        checkInRaffleRecord.daily_raffle_count = checkInRaffleRecord.daily_raffle_count + 1;
+        checkInRaffleRecord.last_raffle_date = current_time;
         get_check_in_raffle(user);
     }
 
-    public entry fun claim_max_raffle(user: &signer){
+    public entry fun claim_max_raffle(user: &signer) {
         let sender = address_of(user);
         let checkinraffle = account::borrow_mut_resource<CheckInRaffle>(@fate);
         let checkInRaffleRecord = account::borrow_mut_resource<CheckInRaffleRecord>(sender);
-        assert!(checkInRaffleRecord.raffle_count >= checkinraffle.max_raffle_count_weight,Err_Not_enough_raffle_times);
+        assert!(checkInRaffleRecord.raffle_count >= checkinraffle.max_raffle_count_weight, Err_Not_enough_raffle_times);
         checkInRaffleRecord.raffle_count = checkInRaffleRecord.raffle_count - checkinraffle.max_raffle_count_weight;
         let treasury = object::borrow_mut(get_treasury());
-        let coin = mint_coin(treasury,checkinraffle.grand_prize_duration);
+        let coin = mint_coin(treasury, checkinraffle.grand_prize_duration);
         account_coin_store::deposit(sender, coin);
     }
 
-
-    public(friend) fun get_check_in_raffle(user: &signer){
+    public(friend) fun get_check_in_raffle(user: &signer) {
         let sender = address_of(user);
-        let random_value = get_random(user,100);
+        let random_value = get_random(user, 100);
         let checkinraffle = account::borrow_mut_resource<CheckInRaffle>(@fate);
         let treasury = object::borrow_mut(get_treasury());
 
         if (random_value <= checkinraffle.grand_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.grand_prize_duration);
+            let coin = mint_coin(treasury, checkinraffle.grand_prize_duration);
             account_coin_store::deposit(sender, coin);
         } else if (random_value <= checkinraffle.grand_prize_weight + checkinraffle.second_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.second_prize_duration);
+            let coin = mint_coin(treasury, checkinraffle.second_prize_duration);
             account_coin_store::deposit(sender, coin);
         } else if (random_value <= checkinraffle.grand_prize_weight + checkinraffle.second_prize_weight + checkinraffle.third_prize_weight) {
-            let coin = mint_coin(treasury,checkinraffle.third_prize_duration);
+            let coin = mint_coin(treasury, checkinraffle.third_prize_duration);
             account_coin_store::deposit(sender, coin);
         };
 
-        emit(CheckInRaffleEmit{
+        emit(CheckInRaffleEmit {
             user: sender,
             result: random_value
         });
@@ -140,8 +145,9 @@ module fate::raffle {
         grand_prize_weight: u256,
         second_prize_weight: u256,
         third_prize_weight: u256,
-        max_raffle_count_weight: u64
-    ){
+        max_raffle_count_weight: u64,
+        daily_max_raffle_count: u64
+    ) {
         let checkinraffle = account::borrow_mut_resource<CheckInRaffle>(@fate);
         checkinraffle.grand_prize_duration = grand_prize_duration;
         checkinraffle.grand_prize_weight = grand_prize_weight;
@@ -150,10 +156,11 @@ module fate::raffle {
         checkinraffle.third_prize_duration = third_prize_duration;
         checkinraffle.third_prize_weight = third_prize_weight;
         checkinraffle.max_raffle_count_weight = max_raffle_count_weight;
+        checkinraffle.daily_max_raffle_count = daily_max_raffle_count;
     }
 
     #[view]
-    public fun query_check_in_raffle(): (u256, u256, u256, u256, u256, u256, u64) {
+    public fun query_check_in_raffle(): (u256, u256, u256, u256, u256, u256, u64, u64) {
         let checkinraffle = account::borrow_resource<CheckInRaffle>(@fate);
         (
             checkinraffle.grand_prize_duration,
@@ -163,15 +170,18 @@ module fate::raffle {
             checkinraffle.third_prize_duration,
             checkinraffle.third_prize_weight,
             checkinraffle.max_raffle_count_weight,
+            checkinraffle.daily_max_raffle_count
         )
     }
 
     #[view]
-    public fun query_check_in_raffle_record(user: address): (address, u64) {
+    public fun query_check_in_raffle_record(user: address): (address, u64, u64, u64) {
         let check_in_raffle_record = account::borrow_resource<CheckInRaffleRecord>(user);
         (
             check_in_raffle_record.user,
-            check_in_raffle_record.raffle_count
+            check_in_raffle_record.raffle_count,
+            check_in_raffle_record.daily_raffle_count,
+            check_in_raffle_record.last_raffle_date
         )
     }
 

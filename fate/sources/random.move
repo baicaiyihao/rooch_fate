@@ -9,8 +9,6 @@ module fate::random {
     use moveos_std::hash::sha3_256;
     use rooch_framework::transaction::{Self, TransactionSequenceInfo};
 
-    friend fate::raffle;
-
     fun u64_to_bytes(num: u64): vector<u8> {
         if (num == 0) {
             return b"0"

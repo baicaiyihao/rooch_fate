@@ -1,7 +1,7 @@
 module fate::daily_check_in {
     use std::signer::address_of;
     use std::vector::{borrow, length};
-    use fate::raffle::get_check_in_raffle;
+    use fate::raffle_v2::get_check_in_raffle;
     use fate::admin::AdminCap;
     use fate::utils::{is_next_day, is_same_day};
     use moveos_std::account;
