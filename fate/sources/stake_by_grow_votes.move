@@ -95,7 +95,7 @@ module fate::stake_by_grow_votes {
             alive: false,
         });
         account::move_resource_to(admin,Projectname{
-            name: string::utf8(b"goldminer"),
+            name: string::utf8(b"fatex"),
         });
     }
 

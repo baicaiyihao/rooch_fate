@@ -81,7 +81,7 @@ module fate::leaderboard {
             rank_tiers: table::new(),
             user_rewards: table::new(),
             last_snapshot: now,
-            end_time: now + 30 * 24 * 60 * 60, // Default cycle: 30 days
+            end_time: 0,
             alive: true,
             total_burned: 0,
             rgas_store,
@@ -267,14 +267,14 @@ module fate::leaderboard {
     }
 
     // Admin deposits RGas into the reward pool
-    public entry fun deposit_rgas_coin_from_module_address(account: &signer, amount: u256, _admin: &mut Object<AdminCap>) {
+    public entry fun deposit_rgas_coin_from_module_address(account: &signer, amount: u256, _: &mut Object<AdminCap>) {
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
         let rgas_coin = account_coin_store::withdraw<RGas>(account, amount);
         coin_store::deposit(&mut leaderboard.rgas_store, rgas_coin);
     }
 
     // Admin deposits GROW into the reward pool
-    public entry fun deposit_grow_coin_from_module_address(account: &signer, amount: u256, _admin: &mut Object<AdminCap>) {
+    public entry fun deposit_grow_coin_from_module_address(account: &signer, amount: u256, _: &mut Object<AdminCap>) {
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
         let grow_coin = account_coin_store::withdraw<GROW>(account, amount);
         coin_store::deposit(&mut leaderboard.grow_store, grow_coin);
