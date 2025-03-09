@@ -194,7 +194,7 @@ module fate::leaderboard {
         fate_weight: u64
     ) {
         let leaderboard = account::borrow_mut_resource<Leaderboard>(@fate);
-        let (total_grow_votes, _, _, _, _, _, _, _, _, _) = query_pool_info();
+        let (total_grow_votes, _, _, _, _, _, _, _, _) = query_pool_info();
         let total_fate_burned = leaderboard.total_burned;
 
         let i = 0;
