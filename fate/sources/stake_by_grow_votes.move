@@ -326,6 +326,24 @@ module fate::stake_by_grow_votes {
     }
 
     #[view]
+    public fun query_stake_info_view_v1(user: address): StakeRecordView {
+        let stake_pool = account::borrow_resource<StakePool>(@fate);
+        let stake_record = account::borrow_mut_resource<StakeRecord>(user);
+        let now_seconds = timestamp::now_seconds();
+        let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
+        let accumulated_fate = calculate_fate_rewards(stake_pool, stake_record, effective_time,user);
+        let total_fate = stake_record.accumulated_fate + accumulated_fate;
+        stake_record.accumulated_fate = stake_record.accumulated_fate + accumulated_fate;
+        StakeRecordView{
+            user: stake_record.user,
+            fate_grow_votes: stake_record.fate_grow_votes,
+            stake_grow_votes: stake_record.stake_grow_votes,
+            last_harvest_timestamp: stake_record.last_harvest_timestamp,
+            accumulated_fate: total_fate
+        }
+    }
+
+    #[view]
     public fun query_pool_info_view(): &StakePool {
         let stake_pool = account::borrow_resource<StakePool>(@fate);
         stake_pool

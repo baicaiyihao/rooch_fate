@@ -82,7 +82,7 @@ module fate::leaderboard {
             user_rewards: table::new(),
             last_snapshot: now,
             end_time: 0,
-            alive: true,
+            alive: false,
             total_burned: 0,
             rgas_store,
             grow_store
