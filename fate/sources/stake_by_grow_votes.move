@@ -406,6 +406,11 @@ module fate::stake_by_grow_votes {
         )
     }
 
+    public fun query_pool_info_view(): &StakePool{
+        let stake_pool = account::borrow_resource<StakePool>(@fate);
+        stake_pool
+    }
+
     // Query a user's staking info as a view struct
     #[view]
     public fun query_stake_info_view(user: address): StakeRecordView {
