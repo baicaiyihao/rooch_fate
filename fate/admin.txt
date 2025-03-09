@@ -1,5 +1,5 @@
 modify_stake_pool
-rooch move run --function default::stake_by_grow_votes_v5::modify_stake_pool --args "object:0x38e59e8f776b8bb3c36554ef136e05c9540ae2094b12c6833735ba4bbf657edc" --args "u256:3600000000" --args "u64:1741500000" --args "u64:1757052000"
+rooch move run --function default::stake_by_grow_votes_v5::modify_stake_pool --args "object:0xcfb8e1f1ef792cf9ec38d3a39a44d74fc12a63360b3592d0c9f3c6cc318a1a28" --args "u256:3600000000" --args "u64:1741500000" --args "u64:1757052000"
 180 days = 15552000
 1741500000
 update_leaderboard_endtime

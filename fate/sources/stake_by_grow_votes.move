@@ -233,18 +233,16 @@ module fate::stake_by_grow_votes_v5 {
         assert!(now_seconds < stake_pool.end_time, ErrorMiningEnded);
 
         let stake_record = if (!table::contains(&stake_pool.stake_records, sender)) {
-            // Case 1: New user staking
             table::add(&mut stake_pool.stake_records, sender, StakeRecord {
                 user: sender,
                 fate_grow_votes: 0,
                 stake_grow_votes: 0,
                 last_harvest_timestamp: now_seconds,
                 accumulated_fate: 0,
-                last_harvest_index: stake_pool.harvest_index, // Align with current pool state
+                last_harvest_index: stake_pool.harvest_index,
             });
             table::borrow_mut(&mut stake_pool.stake_records, sender)
         } else {
-            // Case 2 or 3: Existing user (will be determined below)
             table::borrow_mut(&mut stake_pool.stake_records, sender)
         };
         assert!(stake_record.fate_grow_votes > 0, ErrorZeroVotes);
@@ -252,7 +250,6 @@ module fate::stake_by_grow_votes_v5 {
         let votes_to_stake = stake_record.fate_grow_votes;
 
         if (stake_pool.total_staked_votes <= 0) {
-            // Case 1: First staker when pool is empty
             let time_period = now_seconds - stake_pool.last_update_timestamp;
             stake_record.accumulated_fate = stake_pool.release_per_second * (time_period as u128);
             stake_record.last_harvest_index = 0;
@@ -270,12 +267,10 @@ module fate::stake_by_grow_votes_v5 {
                 now_seconds
             );
             if (stake_record.stake_grow_votes == 0) {
-                // Case 2: New staker in a non-empty pool
                 stake_record.stake_grow_votes = votes_to_stake;
                 stake_record.fate_grow_votes = 0;
                 stake_record.last_harvest_index = new_harvest_index;
             } else {
-                // Case 3: Existing staker adding more votes
                 let period_gain = calculate_withdraw_amount(
                     new_harvest_index,
                     stake_record.last_harvest_index,
@@ -302,57 +297,14 @@ module fate::stake_by_grow_votes_v5 {
         });
     }
 
-    public entry fun unstake(user: &signer) {
-        let sender = signer::address_of(user);
-        let stake_pool = account::borrow_mut_resource<StakePool>(@fate);
-        let now_seconds = timestamp::now_seconds();
-        let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
-        assert!(effective_time >= stake_pool.start_time, ErrorBeforeStartTime);
-
-        let new_harvest_index = calculate_harvest_index(
-            stake_pool.total_staked_votes,
-            stake_pool.last_update_timestamp,
-            stake_pool.start_time,
-            stake_pool.release_per_second,
-            stake_pool.harvest_index,
-            effective_time
-        );
-        assert!(stake_pool.alive, ErrorNotAlive);
-
-        // Destructure StakeRecord similar to rooch_dex
-        let StakeRecord { user: _, fate_grow_votes, stake_grow_votes, last_harvest_timestamp: _, accumulated_fate, last_harvest_index } =
-            table::remove(&mut stake_pool.stake_records, sender);
-        assert!(stake_grow_votes > 0, ErrorNotStaked);
-
-        let period_gain = calculate_withdraw_amount(
-            new_harvest_index,
-            last_harvest_index,
-            (stake_grow_votes as u128)
-        );
-        let total_fate = accumulated_fate + period_gain;
-
-        let remaining_fate = stake_pool.total_fate_supply - stake_pool.total_mined_fate;
-        let remaining_fate_u128 = (remaining_fate as u128);
-        let fate_to_mint = if (total_fate > remaining_fate_u128) { remaining_fate_u128 } else { total_fate };
-        if (fate_to_mint > 0) {
-            let treasury_obj = fate::get_treasury();
-            let treasury = object::borrow_mut(treasury_obj);
-            let fate_coin = mint_coin(treasury, (fate_to_mint as u256));
-            account_coin_store::deposit(sender, fate_coin);
-            stake_pool.total_mined_fate = stake_pool.total_mined_fate + (fate_to_mint as u256);
-        };
-
-        stake_pool.total_staked_votes = stake_pool.total_staked_votes - stake_grow_votes;
-        emit(UnstakeEvent {
-            user: sender,
-            stake_grow_votes,
-            total_fate_grow_votes: fate_grow_votes + stake_grow_votes,
-            fate_amount: fate_to_mint,
-            timestamp: effective_time,
-        });
-
-        stake_pool.harvest_index = new_harvest_index;
-        stake_pool.last_update_timestamp = effective_time;
+    // 新增方法：计算包含 NFT 加成的收益
+    fun calculate_gain_with_nft_boost(user: address, period_gain: u128): u128 {
+        if (check_user_nft(user)) {
+            let (_, _, stake_weight, _) = query_user_nft(user);
+            period_gain * (100 + (stake_weight as u128)) / 100
+        } else {
+            period_gain
+        }
     }
 
     public entry fun harvest(user: &signer) {
@@ -378,7 +330,8 @@ module fate::stake_by_grow_votes_v5 {
             stake_record.last_harvest_index,
             (stake_record.stake_grow_votes as u128)
         );
-        stake_record.accumulated_fate = stake_record.accumulated_fate + period_gain;
+        let boosted_gain = calculate_gain_with_nft_boost(sender, period_gain);
+        stake_record.accumulated_fate = stake_record.accumulated_fate + boosted_gain;
 
         let total_fate = stake_record.accumulated_fate;
         if (total_fate > 0) {
@@ -397,6 +350,59 @@ module fate::stake_by_grow_votes_v5 {
         stake_record.accumulated_fate = 0;
         stake_record.last_harvest_index = new_harvest_index;
         stake_record.last_harvest_timestamp = effective_time;
+
+        stake_pool.harvest_index = new_harvest_index;
+        stake_pool.last_update_timestamp = effective_time;
+    }
+
+    public entry fun unstake(user: &signer) {
+        let sender = signer::address_of(user);
+        let stake_pool = account::borrow_mut_resource<StakePool>(@fate);
+        let now_seconds = timestamp::now_seconds();
+        let effective_time = if (now_seconds > stake_pool.end_time) { stake_pool.end_time } else { now_seconds };
+        assert!(effective_time >= stake_pool.start_time, ErrorBeforeStartTime);
+
+        let new_harvest_index = calculate_harvest_index(
+            stake_pool.total_staked_votes,
+            stake_pool.last_update_timestamp,
+            stake_pool.start_time,
+            stake_pool.release_per_second,
+            stake_pool.harvest_index,
+            effective_time
+        );
+        assert!(stake_pool.alive, ErrorNotAlive);
+
+        let StakeRecord { user: _, fate_grow_votes, stake_grow_votes, last_harvest_timestamp: _, accumulated_fate, last_harvest_index } =
+            table::remove(&mut stake_pool.stake_records, sender);
+        assert!(stake_grow_votes > 0, ErrorNotStaked);
+
+        let period_gain = calculate_withdraw_amount(
+            new_harvest_index,
+            last_harvest_index,
+            (stake_grow_votes as u128)
+        );
+        let boosted_gain = calculate_gain_with_nft_boost(sender, period_gain);
+        let total_fate = accumulated_fate + boosted_gain;
+
+        let remaining_fate = stake_pool.total_fate_supply - stake_pool.total_mined_fate;
+        let remaining_fate_u128 = (remaining_fate as u128);
+        let fate_to_mint = if (total_fate > remaining_fate_u128) { remaining_fate_u128 } else { total_fate };
+        if (fate_to_mint > 0) {
+            let treasury_obj = fate::get_treasury();
+            let treasury = object::borrow_mut(treasury_obj);
+            let fate_coin = mint_coin(treasury, (fate_to_mint as u256));
+            account_coin_store::deposit(sender, fate_coin);
+            stake_pool.total_mined_fate = stake_pool.total_mined_fate + (fate_to_mint as u256);
+        };
+
+        stake_pool.total_staked_votes = stake_pool.total_staked_votes - stake_grow_votes;
+        emit(UnstakeEvent {
+            user: sender,
+            stake_grow_votes,
+            total_fate_grow_votes: fate_grow_votes + stake_grow_votes,
+            fate_amount: fate_to_mint,
+            timestamp: effective_time,
+        });
 
         stake_pool.harvest_index = new_harvest_index;
         stake_pool.last_update_timestamp = effective_time;
@@ -437,12 +443,7 @@ module fate::stake_by_grow_votes_v5 {
             stake_record.last_harvest_index,
             (stake_record.stake_grow_votes as u128)
         );
-        if (check_user_nft(user)) {
-            let (_, _, stake_weight, _) = query_user_nft(user);
-            user_gain * (100 + (stake_weight as u128)) / 100
-        } else {
-            user_gain
-        }
+        calculate_gain_with_nft_boost(user, user_gain)
     }
 
     #[view]
