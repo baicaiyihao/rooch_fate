@@ -10,7 +10,7 @@ module fate::fate {
 
     friend fate::daily_check_in;
     friend fate::raffle;
-    friend fate::stake_by_grow_votes_v5;
+    friend fate::stake_by_grow_votes_v1;
     friend fate::leaderboard;
 
     const ErrorTransferAmountTooLarge: u64 = 1;

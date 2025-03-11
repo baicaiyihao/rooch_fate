@@ -1,4 +1,4 @@
-module fate::stake_by_grow_votes_v5 {
+module fate::stake_by_grow_votes_v1 {
     use std::signer;
     use std::string::{Self, String};
     use fate::admin::AdminCap;
@@ -151,7 +151,7 @@ module fate::stake_by_grow_votes_v5 {
             stake_records: table::new(),
         });
         account::move_resource_to(admin, Projectname {
-            name: string::utf8(b"goldminer"),
+            name: string::utf8(b"fatex"),
         });
     }
 
@@ -297,7 +297,6 @@ module fate::stake_by_grow_votes_v5 {
         });
     }
 
-    // 新增方法：计算包含 NFT 加成的收益
     fun calculate_gain_with_nft_boost(user: address, period_gain: u128): u128 {
         if (check_user_nft(user)) {
             let (_, _, stake_weight, _) = query_user_nft(user);

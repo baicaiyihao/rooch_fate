@@ -16,7 +16,7 @@ module fate::leaderboard {
     use rooch_framework::account_coin_store;
     use grow_bitcoin::grow_bitcoin::GROW;
     use fate::user_nft::{mint_usernft, query_user_nft, check_user_nft, update_nft, set_user_nft_burn_amount};
-    use fate::stake_by_grow_votes_v5::{query_pool_info, query_stake_info};
+    use fate::stake_by_grow_votes_v1::{query_pool_info, query_stake_info};
 
     // Error codes
     const E_LEADERBOARD_NOT_ALIVE: u64 = 101;  // Leaderboard is not active
