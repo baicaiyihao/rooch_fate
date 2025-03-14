@@ -1,7 +1,7 @@
 module fate::daily_check_in {
     use std::signer::address_of;
     use std::vector::{borrow, length};
-    use fate::raffle::get_check_in_raffle;
+    use fate::raffle::{get_check_in_raffle, get_check_in_raffle_v1};
     use fate::admin::AdminCap;
     use fate::utils::{is_next_day, is_same_day};
     use moveos_std::account;
@@ -104,6 +104,16 @@ module fate::daily_check_in {
         userCheckIn.lottery_count = userCheckIn.lottery_count - 1;
         get_check_in_raffle(user);
     }
+
+    public entry fun get_week_raffle_v1(user: &signer){
+        let sender = signer::address_of(user);
+        let userCheckIn = account::borrow_mut_resource<CheckInRecord>(sender);
+
+        assert!(userCheckIn.lottery_count > 0,Err_CHECKED_IN_RAFFLE);
+        userCheckIn.lottery_count = userCheckIn.lottery_count - 1;
+        get_check_in_raffle_v1(user);
+    }
+
 
     #[view]
     public fun get_check_in_record(user: address): (address, u64, u64, u64, u64, u64){
